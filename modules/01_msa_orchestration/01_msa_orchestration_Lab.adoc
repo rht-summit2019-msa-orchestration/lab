@@ -140,7 +140,7 @@ To keep things simple, the entity is stored in the database schema used by the R
 
 When it comes to leveraging the RHPAM engine in a microservice, there are several possibilities. We could use the Process Server as is, but Process Server being a general use business process execution server, it seems a bit heavy-weight for what we need. In the end, the fact that the Dispatch service uses a process engine should be an implementation detail. If we use Process Server as such, the API (be it REST or JMS) would leak to client services, which have to know about Process Server specific things like deployment id's, process instance id's, specific payload structures etc...
 
-The RHPAM engine can also be embedded in a stand-alone application. The community provides Spring Boot starters to make that task easier.
+The RHPAM engine can also be embedded in a stand-alone application. The product provides Spring Boot starters to make that task easier.
 
 For this lab however, we decided to integrate the engine from scratch in a Spring Boot application. This is not only a great learning exercise (if you're into that of course), but also gives maximum flexibility to provide just the components needed to sustain the use case.
 
@@ -246,7 +246,7 @@ All services in the application use the AMQP protocol over SSL/TLS (amqps) for c
 
 The lab material is hosted on GitHub, at the following URL:
 
-`https://github.com/gpte-rhte2018-msa-orchestration`
+`https://github.com/rht-summit2019-msa-orchestration`
 
 The material consists of a number of git repositories:
 
@@ -260,10 +260,10 @@ The material consists of a number of git repositories:
 Create a folder on your workstation, and using `git`, clone the different projects into the folder.
 
 ----
-$ git clone https://github.com/gpte-rhte2018-msa-orchestration/installation.git
-$ git clone https://github.com/gpte-rhte2018-msa-orchestration/dispatch-service.git
-$ git clone https://github.com/gpte-rhte2018-msa-orchestration/driver-service.git
-$ git clone https://github.com/gpte-rhte2018-msa-orchestration/passenger-service.git
+$ git clone https://github.com/rht-summit2019-msa-orchestration/installation.git
+$ git clone https://github.com/rht-summit2019-msa-orchestration/dispatch-service.git
+$ git clone https://github.com/rht-summit2019-msa-orchestration/driver-service.git
+$ git clone https://github.com/rht-summit2019-msa-orchestration/passenger-service.git
 ----
 
 NOTE: We highly encourage you to review the source code of the different services. However, please do not import the source code into an IDE during this lab (a text editor like Atom or Sublime is fine). Doing so will cause the IDE to try to build the code, and start downloading missing Maven dependencies. Considering the number of participants in this lab today, this will consume way too much bandwith.
