@@ -35,14 +35,12 @@ Whether this is a valuable and recommendable architecture is left to the appreci
 
 *Tools*
 
-You will need the following tools on your local machine:
+You will need the following tools on your local machine. These are installed on the lab laptop:
 
 * `oc` CLI tool, version 3.11
 * `git`
-* java JDK 1.8
-* `openssl`
 * a text editor like Atom, or Sublime Text (optional)
-* Ansible version 2.6.x (optional)
+* Ansible version 2.7.x (optional)
 * SoapUI version 5.4.0 (optional)
 
 *Skills*
@@ -53,11 +51,13 @@ You will need the following tools on your local machine:
 
 == OpenShift Environment
 
+NOTE: TODO: Modify URLs, Lab codes and Screenshots to match Summit Guid Grabber
+
 An Openshift environment is provided to you to deploy and run the lab's assets.
 
-Details about the environment are obtained through the Red Hat Tech Exchange _GuidGrabber_.
+Details about the environment are obtained through the Red Hat Summit _GuidGrabber_.
 
-. In a browser window, navigate to http://bit.ly/rhte-guidgrabber
+. In a browser window, navigate to http://bit.ly/summit-guidgrabber.
 +
 image::images/guid_grabber_landing_page.png[]
 . From this page select the Lab Code : `A1009`
@@ -83,20 +83,6 @@ To login with the `oc` client:
 $ oc login https://master.<GUID>.rhte.opentlc.com -u user<lab number>
 ----
 * When prompted, enter the password mentioned in the GuidGrabber tool.
-
-*Lab virtual machine*
-
-There is a virtual machine for this lab that has all the required tools installed. The virtual machine has no GUI, so only command line access is available. Note that you can also use your personal laptop to do the lab, provided you have the required tools installed.
-
-To log into the virtual machine:
-
-* In a terminal, enter the following command:
-+
-----
-$ ssh lab-user@clientvm<lab number>.<GUID>.rhte.opentlc.com
-----
-* When prompted `Are you sure you want to continue connecting (yes/no)?`, enter `yes`.
-* When prompted for the password, enter the password mentioned in the GuidGrabber tool.
 
 == Glossary
 
@@ -253,8 +239,8 @@ The material consists of a number of git repositories:
 * *dispatch-service* : the source code for the dispatch service.
 * *driver-service* : the source code for the driver service.
 * *passenger-service* : the source code for the passenger service.
-* *dispatch-service-kjar* : a kjar that contains the process definition used in the dispatch service. Note that in this lab we do not use this kjar - the process definition was copied into the dispatch service.
-* *installation* : Ansible playbooks to install the different components on OpenShift and OPenShift resource files.
+* *dispatch-service-kjar* : a kjar that contains the process definition used in the dispatch service.
+* *installation* : Ansible playbooks to install the different components on OpenShift and OpenShift resource files.
 * *soapui* : SoapUI project to generate load in the system.
 
 Create a folder on your workstation, and using `git`, clone the different projects into the folder.
@@ -682,319 +668,116 @@ Some ways to work around this :
 
 == Provisioning on OpenShift
 
-=== EnMasse Messaging
+=== AMQ Streams
 
-As mentioned above, EnMasse comes with two address spaces, standard and brokered. In this lab, we use a brokered address space.
+AMQ Streams uses the Operator model to deploy and manage Kafka (including Zookeeper) clusters. The AMQ Streams Cluster Operator works in tandem with a Kafka Custom Resource Definition, which describes the target Kafka cluster. When a Kafka resource is deployed into an OpenShift namespace monitored by the Cluster Operator, the Operator deploys a corresponding Kafka cluster. The cluster consists of a Zookeeper ensemble, the Kafka cluster and the Entity Operator, which provides operator-style topic management via KafkaTopic custom resources.
 
-EnMasse also requires at least one authentication service to be deployed. The authentication service can be _none_, _standard_ or _external_. +
-The _standard_ authentication service leverages Keycloak (the upstream project of Red Hat SSO).
-The _none_ authentication service is an allow-all mocked out authentication service.
+image::images/amq_streams_cluster_operator.png[]
 
-For this lab we will use the none authentication service. The main reason is that the capacity of the environment in OpenShift is limited, and the none authentication service pod is a lot easier on resources compared to Keycloak.
+Deploying Custom Resource Definitions on an OpenShift cluster requires cluster admin access. Cluster admin access is also required to give cluster users the necessary privileges to be able to create Kafka and KafkaTopic custom resources. These tasks have already been done on the OpenShift cluster used for this lab.
 
-You will find here two alternatives to provision EnMasse in the OpenShift environment, manual or through an Ansible playbook. The manual method only requires the OpenShift `oc` command line client. The Ansible playbook requires ansible, and the `oc` client. You also need `openssl` to generate certificates.
+In this lab, you leverage Ansible to deploy the Kafka and KafkaTopic resource definitions that describe the Kafka cluster and topics. The Kafka cluster consists of a Zookeeper ensemble of 3 nodes, and a Kafka cluster of 3 broker nodes.
 
-==== EnMasse installation
-
-. Make sure you are logged with the `oc` client into your OpenShift environment.
+. Make sure you are logged in with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-. Create a project on OpenShift. The project name has to be unique within the OpenShift cluster, so use `enmasse-` suffixed with your name or another unique identifier.
+. Change directory to the `ansible` directory, and run the `kafka_cluster.yml` playbook:
 +
 ----
-$ export ENMASSE_PRJ=enmasse-<unique suffix>
-$ oc new-project $ENMASSE_PRJ
-----
-* Note the usage of the `ENMASSE_PRJ` environment variable. As long as you stay in the same terminal window, you can reuse the environment variable in other commands. This should make copy-paste from the lab instructions more convenient.
-. Create service accounts for the EnMasse address space controller and agent controller:
-+
-----
-$ oc create sa enmasse-admin -n $ENMASSE_PRJ
-$ oc create sa address-space-admin -n $ENMASSE_PRJ
-----
-. Give project admin rights to the `enmasse-admin` and `address-space-admin` service accounts
-+
-----
-$ oc adm policy add-role-to-user admin system:serviceaccount:$ENMASSE_PRJ:enmasse-admin -n $ENMASSE_PRJ
-$ oc adm policy add-role-to-user admin system:serviceaccount:$ENMASSE_PRJ:address-space-admin -n $ENMASSE_PRJ
-----
-. Create a self-signed certificate for the `none` authentication service
-+
-----
-$ openssl genrsa -out /tmp/none-auth.ca.key 2048
-$ openssl req -new -x509 -days 1100 -key /tmp/none-auth.ca.key -subj "/O=io.enmasse/CN=none-authservice.$ENMASSE_PRJ.svc.cluster.local" -out /tmp/none-auth.ca.crt
-$ openssl req -newkey rsa:2048 -nodes -keyout /tmp/none-auth.key -subj "/O=io.enmasse/CN=none-authservice.$ENMASSE_PRJ.svc.cluster.local" -out /tmp/none-auth.csr
-$ openssl x509 -req -extfile <(printf subjectAltName=DNS:none-authservice.$ENMASSE_PRJ.svc.cluster,DNS:none-authservice.$ENMASSE_PRJ.svc,DNS:none-authservice) -days 1100 -in /tmp/none-auth.csr -CA /tmp/none-auth.ca.crt -CAkey /tmp/none-auth.ca.key -CAcreateserial -CAserial /tmp/none-auth.srl -out /tmp/none-auth.crt
-----
-. Create a secret with the certificate and the private key:
-+
-----
-$ oc create secret tls none-authservice-cert --cert="/tmp/none-auth.crt" --key="/tmp/none-auth.key" -n $ENMASSE_PRJ
-----
-. Create the `none` authentication service.
-+
-----
-$ oc apply -f openshift/enmasse/none-authservice/service.yaml -n $ENMASSE_PRJ
-$ oc apply -f openshift/enmasse/none-authservice/deployment.yaml -n $ENMASSE_PRJ
-----
-. Create a self-signed certificate for the EnMasse broker
-+
-----
-$ openssl genrsa -out /tmp/messaging.ca.key 2048
-$ openssl req -new -x509 -days 1100 -key /tmp/messaging.ca.key -subj "/O=io.enmasse/CN=messaging.$ENMASSE_PRJ.svc.cluster.local" -out /tmp/messaging.ca.crt
-$ openssl req -newkey rsa:2048 -nodes -keyout /tmp/messaging.key -subj "/O=io.enmasse/CN=messaging.$ENMASSE_PRJ.svc.cluster.local" -out /tmp/messaging.csr
-$ openssl x509 -req -extfile <(printf subjectAltName=DNS:messaging.$ENMASSE_PRJ.svc.cluster.local,DNS:messaging.$ENMASSE_PRJ.svc.cluster,DNS:messaging.$ENMASSE_PRJ.svc,DNS:messaging) -days 1100 -in /tmp/messaging.csr -CA /tmp/messaging.ca.crt -CAkey /tmp/messaging.ca.key -CAcreateserial -CAserial /tmp/messaging.srl -out /tmp/messaging.crt
-----
-. Create a secret with the certificate and the private key:
-+
-----
-$ oc create secret tls external-certs-messaging --cert="/tmp/messaging.crt" --key="/tmp/messaging.key" -n $ENMASSE_PRJ
-----
-. Create the brokered plan and resource configuration
-+
-----
-$ oc apply -f openshift/enmasse/resource-definitions/resource-definitions.yaml -n $ENMASSE_PRJ
-$ oc apply -f openshift/enmasse/plans/brokered-plans.yaml -n $ENMASSE_PRJ
-----
-. Deploy the address space controller
-+
-----
-$ oc apply -f openshift/enmasse//address-space-controller/address-space-definitions.yaml -n $ENMASSE_PRJ
-$ oc apply -f openshift/enmasse//address-space-controller/deployment.yaml -n $ENMASSE_PRJ
-----
-. Wait until the address controller pod is up and running. In the OpenShift console, the EnMasse project looks like:
-+
-image::images/enmasse_openshift_project.png[]
-. Create the address space.
-+
-----
-$ oc process -f openshift/enmasse/templates/address-space.yaml -p NAME=brokered-default -p NAMESPACE=$ENMASSE_PRJ -p TYPE=brokered -p PLAN=unlimited-brokered -p AUTHENTICATION_SERVICE=none | oc apply -n $ENMASSE_PRJ -f -
-----
-* This command creates a configmap with the address space definition in the enmasse project. The EnMasse address controllers watches the configmaps in the project, and upon discovery of a address space definition configmap will proceed and deploy the address space.
-* In the case of a brokered address space, a single Artemis broker pod is deployed, as well as an address controller pod.
-* The role of the address controller is equivalent to that of the address space controller, but for addresses: the controller watches configmaps in the namespace, and on detection of a address configuration configmap, proceeds to create the address on the broker. The address controller also hosts the EnMasse console.
-. Wait until the broker and address controller pods are up and running. In the OpenShift console, the EnMasse project looks like:
-+
-image::images/enmasse_openshift_project_2.png[]
-. Create the address for the `topic-ride-event` topic. One way to create addresses in EnMasse is by creating a configmap.
-+
-----
-$ oc process -f openshift/enmasse/templates/address.yaml -p NAME=topic-ride-event -p ADDRESS=topic-ride-event -p NAMESPACE=$ENMASSE_PRJ -p ADDRESS_SPACE=brokered-default -p TYPE=topic -p PLAN=brokered-topic | oc apply -n $ENMASSE_PRJ -f -
-----
-+
-* You can check that the creation of the address by looking at the contents of the configmap. If successful, the address controller adds `"status":{"isReady":true,"phase":"Active"}` to the JSON object in the configmap.
-+
-----
-$ oc get configmap topic-ride-event -o template --template={{.data}} -n $ENMASSE_PRJ
-----
-+
-.Sample Output
-----
-map[config.json:{"apiVersion":"enmasse.io/v1","kind":"Address","metadata":{"name":"topic-ride-event","namespace":"enmasse-bt","addressSpace":"brokered-default"},"spec":{"address":"topic-ride-event","type":"topic","plan":"brokered-topic"},"status":{"isReady":true,"phase":"Active"}}]
-----
-. Another way to create addresses is through the EnMasse web console.
-* Get the URL of the console:
-+
-----
-$ echo "https://$(oc get route console -o template --template {{.spec.host}} -n $ENMASSE_PRJ)"
-----
-* Alternatively, obtain the URL from route definition in the OpenShift console
-* In a web browser navigate to the URL of the console. Accept the security exception for using self-signed certificates. The landing page of the console opens:
-+
-image::images/enmasse_console_landingpage.png[]
-* Note that no login is required. This is because we use the `none` authentication service.
-* Proceed to the `Addresses` tab. Click on the `Create` button at the top of the screen.
-** Name the topic `topic-driver-command`, and seletc `topic` as the type.
-** Click `Next` twice, and finally `Create` to create the address. The address is added to the addresses list in the console.
-. Make sure you create the following addresses:
-+
-[cols="2",options="header"]
-|=======================================
-|Name|Type
-|topic-ride-event|topic
-|topic-driver-command|topic
-|topic-driver-event|topic
-|topic-passenger-command|topic
-|topic-passenger-event|topic
-|=======================================
-+
-image::images/enmasse_console_addresses.png[]
-
-
-==== EnMasse Ansible installation
-
-If you have Ansible installed, you can run the Ansible playbook provided in the lab material. The playbook performs the same steps as the manual install, including creating the address space and the addresses required for the lab.
-
-. Make sure you are logged with the `oc` client into your OpenShift environment.
-. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-. Run the EnMasse playbook. Provide the name of the project where to install EnMasse as a parameter to the playbook. Remember, the project name should be unique within the cluster.
-+
-----
-$ ENMASSE_PRJ=enmasse-<unique suffix>
 $ cd ansible
-$ ansible-playbook playbooks/enmasse.yml -e project_enmasse=$ENMASSE_PRJ
+$ ansible-playbook playbooks/kafka_cluster.yml
 ----
-. Expect the playbook to run to completion without failures. Expected failures during the execution of the playbook are ignored by the playbook. What matters is that the `PLAY RECAP` summary at the end of the playbook output shows no failures.
 +
-image::images/enmasse_ansible_playbook.png[]
+The playbook deploys the Kafka resource for your Kafka cluster.
+. Expect the playbook to run to completion without failures. The playbook will wait until the Topic Operator is up and running.
++
+image::images/kafka_ansible_playbook.png[]
 . In the case of an unexpected failure, try to find the root cause, and fix it. Run the playbook again. The playbook is idempotent, so it can be run several times if needed.
-. Once the playbook has run successfully, check through the OPenShift Web Console and the EnMasse console that everything went as expected.
-
-==== Installation review
-
-Take a moment to review the EnMasse installation:
-
-*Deployments*
-
-image::images/enmasse_deployments.png[]
-
-* address-space controller : manages address spaces.
-* agent: manages addresses. Hosts the EnMasse console.
-* broker: instance of a AMQ 7 broker. In the case of a standard address space, there is a single broker instance.
-* none-authservice: the authentication service.
-
-*Routes*
-
-image::images/enmasse_routes.png[]
-
-* console : route exposing the EnMasse console. Forwarded to the console service.
-* messaging : external messaging route. Supports AMQP and OPENWIRE over SSL/TLS (amqps). Forwarded to the messaging service. When connecting a client from outside of OpenShift to the EnMasse broker, the connection URL will be something like `amqps://messaging-<enmasse-namespace>.<ocp-domain>:443` when using AMQP.
-
-*Services*
-
-image::images/enmasse_services.png[]
-
-* broker : port 55671 - used for internal communication between EnMasse components
-* console : exposes the EnMasse console.
-* messaging : port 5671 and 5672. Messaging clients connect to this service. Port 5672 supports AMQP, CORE, OPENWIRE, MQTT protocols. Port 5671 supports AMQP, CORE, OPENWIRE, MQTT over SSL.
-* none-authservice : exposes the none-authentication service to EnMasse components.
-
-*Storage*
-
-The broker has a persistent volume mounted to `/var/run/artemis`. The broker configuration and journal is written to that persistent volume. Each broker pod gets its own directory (`/var/run/artemis/split-1` for the first one and so on). This means that the broker can be scaled up. However scaling down is not supported at the moment.
-
-*Configmaps*
-
-image::images/enmasse_services.png[]
-
-Note that every address has a configmap with labels `app=enmasse,type=address-config`. The agent watches configmaps with these labels and creates, removes or updates addresses on the broker whenever a configmap is created, deleted or updated.
-
-*Secrets*
-
-The `external-certs-messaging` secret holds the server-side certificate and private key for SSL connection with messaging clients over port 5671.
+. Run the `kafka_topics.yml` playbook. This playbook installs KafkaTopic resources, based on which the Topic Operator creates the topics in the Kafka cluster.
++
+----
+$ ansible-playbook playbooks/kafka_topics.yml
+----
+. Expect the playbook to run to completion without failures.
++
+image::images/kafka_topics_ansible_playbook.png[]
+. Take a moment to review the installation.
+* The Kafka cluster is deployed in a project `kafka-cluster-user<lab number>`. In the OpenShift console, log in as your user, and navigate to the project where the Kafka cluster is deployed. Expect to see the following:
++
+image::images/kafka_cluster_deployment.png[]
++
+* *kafka-cluster-zookeeper* : Zookeeper ensemble consisting of 3 pods.
+* *kafka-cluster-kafka*: Kafka broker cluster, consistsing of 3 broker pods.
+* *kafka-cluster-entity-operator*: runs the Topic Operator, which watches KafkaTopic resources and manages Kafka topics on the cluster.
+* If you want to review the Kafka cluster resource, you can get the yaml representation with `oc`:
++
+----
+$ oc project kafka-cluster-user<lab number>
+$ oc get kafka kafka-cluster -o yaml
+----
++
+The Kafka cluster resource descriptor is very detailed. It basically consists of three sections: `zookeeper`, `kafka` and `entityOperator`. +
+The `replicas` settings in the `kafka` sections determines the number of brokers in the kafka cluster. The `config` section sets configuration settings for the Kafka cluster, like the replication factor for the topic offsets.
++
+image::images/kafka_cluster_resource.png[]
+* To review the topics created on the cluster:
++
+----
+$ oc get kafkatopic
+----
++
+image::images/kafka_topics.png[]
+* To review the details of a topic:
++
+----
+$ oc get kafkatopic topic-driver-command -o yaml
+----
++
+image::images/kafka_topic_details.png[]
++
+Note that the topic is configured with 2 replicas and 15 partitions.
 
 === Tools
 
-Before we can start deploying the services that make up the application, we need to install some tools:
+Before we can start deploying the services that make up the Acme Ride application, we need to install some tools:
 
 * Gogs: a lightweight Git server written in Go.
 * Jenkins: the ubiquitous continuous integration server
 * pgAdmin4: an open source web based administration and development platform for PostgreSQL
 
-Just as with EnMasse, you have the choice between manual installation, or
-Ansible playbooks.
+Just as with the Kafka cluster, you use Ansible playbooks to install these tools on OpenShift.
 
 ==== Gogs installation
 
+The Ansible playbook installs the Gogs server, including creating the admin user (`gogsadmin/admin123`), developer user (`developer/developer123`) and organization (`acme`).
+
 . Make sure you are logged with the `oc` client into your OpenShift environment.
-. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-. Create a project on OpenShift. The project will be used for the different tools we need to install. The project name has to be unique within the OpenShift cluster, so use `tools-` suffixed with your name or another unique identifier.
+. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material. Change directory to the `ansible` folder.
+. Run the Gogs playbook.
 +
 ----
-$ export TOOLS_PRJ=tools-<unique suffix>
-$ oc new-project $TOOLS_PRJ
+$ cd ansible
+$ ansible-playbook playbooks/gogs.yml
 ----
-. Obtain the name of your Openshift domain.
+. Expect the playbook to run to completion without failures.
++
+image::images/gogs_ansible_playbook_2.png[]
+. Gogs is deployed in the `ride-msa-tools-user<lab number>` project. +
+Get the URL for the `gogs` route:
 +
 ----
-$ oc create route edge testroute --service=testsvc --port=80 -n $TOOLS_PRJ
-$ DOMAIN=$(oc get route testroute -o jsonpath='{.spec.host}' -n $TOOLS_PRJ | sed "s/testroute-${TOOLS_PRJ}.//g")
-$ oc delete route testroute -n $TOOLS_PRJ
-----
-. Deploy Gogs using the template in the `openshift/gogs` folder:
-+
-----
-$ oc process -f openshift/gogs/gogs-persistent-template.yaml --param=APPLICATION_NAME=gogs --param=HOSTNAME=gogs-$TOOLS_PRJ.$DOMAIN --param=GOGS_VERSION=0.11.34 --param=DATABASE_USER=gogs --param=DATABASE_PASSWORD=gogs --param=DATABASE_NAME=gogs --param=SKIP_TLS_VERIFY=true | oc create -f - -n $TOOLS_PRJ
-----
-* Note that the deployment for the gogs server is paused.
-. Wait until the PostgreSQL pod is up and running.
-. Resume the `gogs` deployment:
-+
-----
-$ oc rollout resume dc/gogs -n $TOOLS_PRJ
-----
-. Get the URL for the `gogs` route:
-+
-----
-$ echo "http://$(oc get route gogs -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
+$ oc project ride-msa-tools-user<lab number>
+$ echo "http://$(oc get route gogs -o jsonpath='{.spec.host}')"
 ----
 . In a web browser window, navigate to the gogs URL. Expect to see the Gogs landing page.
 +
 image::images/gogs_landing_page.png[]
-. Create an admin user - the first user created on Gogs has admin privileges:
-* Click on the `Register` link on top of the page.
-* In the Sign Up form, fill in the following data:
-** Username: gogsadmin
-** Email: admin@acme.com
-** Password: admin123
-** Re-type: admin123
-* Click `Create new Account`.
-. Create a developer account:
-* Click on the `Register` link on top of the page.
-* In the Sign Up form, fill in the following data:
-** Username: developer
-** Email: developer@acme.com
-** Password: developer123
-** Re-type: developer123
-* Click `Create new Account`.
-. Sign in as `developer`, and create a new organization called `acme`. You will use this organization to host the application source code.
-
-==== Gogs Ansible installation
-
-If you have Ansible installed, you can run the Ansible playbook provided in the lab material. The playbook executes the same steps as the manual install, including creating the admin user (`gogsadmin/admin123`), developer user (`developer/developer123`) and organization (`acme`).
-
-. Make sure you are logged with the `oc` client into your OpenShift environment.
-. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material. Change directory to the `ansible` folder.
-. Run the Gogs playbook. Provide the name of the project where to install Gogs and the other tools as a parameter to the playbook. Remember, the project name should be unique within the cluster.
+. Sign in as user `developer`, password `developer123`. Verify that Gogs contains an organization called `Acme`. We will use this organization to host the application code.
 +
-----
-$ TOOLS_PRJ=tools-<unique suffix>
-$ cd ansible
-$ ansible-playbook playbooks/gogs.yml -e project_tools=$TOOLS_PRJ
-----
-. Expect the playbook to run to completion without failures.
-+
-image::images/gogs_ansible_playbook.png[]
+image::images/gogs_landing_page_organization.png[]
 
 ==== pgAdmin4 installation
 
 We use an image from https://www.crunchydata.com[CrunchyData], a US based company offering services around enterprise deployments of PostgreSQL.
-
-. Make sure you are logged with the `oc` client into your OpenShift environment.
-. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-. Create a secret for the pgAdmin4 username and password
-+
-----
-$ oc create secret generic pgadmin4-credentials --from-literal=pgadmin4.username=admin@example.com --from-literal=pgadmin4.password=admin123 -n $TOOLS_PRJ
-----
-. Deploy a service, route and deployment for pgAdmin:
-+
-----
-$ oc apply -f openshift/pgadmin4/deployment.yaml -n $TOOLS_PRJ
-----
-. Get the URL for the `pgadmin4` route:
-+
-----
-$ echo "http://$(oc get route pgadmin4 -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
-----
-. In a browser window, navigate to the URL of the pgAdmin4 route. Login with `admin@example.com/admin123`. Expect to see the landing page of pgAdmin4.
-+
-image::images/pgadmin4_landing_page.png[]
-
-WARNING: We have encountered issues with the pgAdmin4 application running in the lab environment, probably due to DNS issues. This is not critical for the remainder of the lab.
-
-==== pgAdmin4 Ansible installation
-
-If you have Ansible installed, you can run the Ansible playbook provided in the lab material. The playbook executes the same steps as the manual install.
 
 . Make sure you are logged with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material. Change directory to the `ansible` folder.
@@ -1002,9 +785,19 @@ If you have Ansible installed, you can run the Ansible playbook provided in the 
 +
 ----
 $ cd ansible
-$ ansible-playbook playbooks/pgadmin4.yml -e project_tools=$TOOLS_PRJ
+$ ansible-playbook playbooks/pgadmin4.yml
 ----
 . Expect the playbook to run to completion without failures.
+. pgAdmin4 is deployed in the `ride-msa-tools-user<lab number>` project. +
+Get the URL for the `pgadmin4` route:
++
+----
+$ oc project ride-msa-tools-user<lab number>
+$ echo "http://$(oc get route pgadmin4 -o jsonpath='{.spec.host}')"
+----
+. In a browser window, navigate to the URL of the pgAdmin4 route. Login with `admin@example.com/admin123`. Expect to see the landing page of pgAdmin4.
++
+image::images/pgadmin4_landing_page.png[]
 
 ==== Jenkins installation
 
@@ -1015,34 +808,117 @@ Slave build pods can be configured as part of the build pipeline script, or with
 
 . Make sure you are logged with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-. Review the `openshift/jenkins/jenkins-maven-slave-configmap.yaml` configmap definition. In particular, pay particular attention to the following points:
-* The configmap has a label `jenkins-slave`. The Jenkins Kubernetes plugin watches for configmaps with this label, and when deteced, will configure a slave build pod according to the definition in the configmap.
-* The `name` element in the `PodTemplate` definition is the name used to reference the build pod in build pipeline scripts.
-* The `volume` element defines a persistent volume to be mounted at `/home/jenkins/.m2/repository`, which corresponds to the location of the local Maven repository in the build pod.
-* The `image` element indicates which image to use for the slave pod. In this case we use the image of the regular Maven build pod.
-. Create the configmap:
+. Review the `openshift/jenkins/jenkins-maven-slave-configmap.yaml` configmap definition.
 +
 ----
-$ oc create -f openshift/jenkins/jenkins-maven-slave-configmap.yaml -n $TOOLS_PRJ
+kind: List
+metadata: {}
+apiVersion: v1
+items:
+- kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    labels:
+      role: jenkins-slave <1>
+      app: jenkins
+    name: jenkins-maven-slave <2>
+  data:
+    template1: |-
+      <org.csanchez.jenkins.plugins.kubernetes.PodTemplate>
+        <inheritFrom></inheritFrom>
+        <name>maven-with-pvc</name>
+        <namespace></namespace>
+        <privileged>false</privileged>
+        <alwaysPullImage>false</alwaysPullImage>
+        <instanceCap>2147483647</instanceCap>
+        <slaveConnectTimeout>100</slaveConnectTimeout>
+        <idleMinutes>0</idleMinutes>
+        <activeDeadlineSeconds>0</activeDeadlineSeconds>
+        <label>maven-with-pvc</label>
+        <serviceAccount>jenkins</serviceAccount>
+        <nodeSelector></nodeSelector>
+          <nodeUsageMode>NORMAL</nodeUsageMode>
+          <customWorkspaceVolumeEnabled>false</customWorkspaceVolumeEnabled>
+          <workspaceVolume class="org.csanchez.jenkins.plugins.kubernetes.volumes.workspace.EmptyDirWorkspaceVolume">
+            <memory>false</memory>
+          </workspaceVolume>
+        <volumes> <3>
+          <org.csanchez.jenkins.plugins.kubernetes.volumes.PersistentVolumeClaim>
+            <mountPath>/home/jenkins/.m2/repository</mountPath>
+            <claimName>jenkins-maven-slave-repository</claimName>
+            <readOnly>false</readOnly>
+          </org.csanchez.jenkins.plugins.kubernetes.volumes.PersistentVolumeClaim>
+        </volumes>
+        <containers>
+          <org.csanchez.jenkins.plugins.kubernetes.ContainerTemplate>
+            <name>jnlp</name> <4>
+              <image>registry.redhat.io/openshift3/jenkins-agent-maven-35-rhel7:v3.11</image>
+            <privileged>false</privileged>
+            <alwaysPullImage>false</alwaysPullImage>
+            <workingDir>/tmp</workingDir>
+            <command></command>
+            <args>${computer.jnlpmac} ${computer.name}</args>
+            <ttyEnabled>false</ttyEnabled>
+            <resourceRequestCpu>200m</resourceRequestCpu>
+            <resourceRequestMemory>500Mi</resourceRequestMemory>
+            <resourceLimitCpu>1000m</resourceLimitCpu>
+            <resourceLimitMemory>1Gi</resourceLimitMemory>
+            <envVars>
+            </envVars>
+            <ports/>
+            <livenessProbe>
+              <execArgs></execArgs>
+              <timeoutSeconds>0</timeoutSeconds>
+              <initialDelaySeconds>0</initialDelaySeconds>
+              <failureThreshold>0</failureThreshold>
+              <periodSeconds>0</periodSeconds>
+              <successThreshold>0</successThreshold>
+            </livenessProbe>
+          </org.csanchez.jenkins.plugins.kubernetes.ContainerTemplate>
+        </containers>
+        <envVars/>
+        <annotations/>
+        <imagePullSecrets/>
+        <nodeProperties/>
+      </org.csanchez.jenkins.plugins.kubernetes.PodTemplate>
 ----
-. Create the persistent volume claim for the slave build pod:
+<1> The configmap has a label `jenkins-slave`. The Jenkins Kubernetes plugin watches for configmaps with this label, and when deteced, will configure a slave build pod according to the definition in the configmap.
+<2> The `name` element in the `PodTemplate` definition is the name used to reference the build pod in build pipeline scripts.
+<3> The `volume` element defines a persistent volume to be mounted at `/home/jenkins/.m2/repository`, which corresponds to the location of the local Maven repository in the build pod.
+<4> The `image` element indicates which image to use for the slave pod. In this case we use the image of the regular Maven build pod.
+
+. Change directory to the `ansible` folder. Run the Jenkins playbook.
 +
 ----
-$ oc create -f openshift/jenkins/jenkins-maven-slave-pvc.yaml -n $TOOLS_PRJ
+$ cd ansible
+$ ansible-playbook playbooks/jenkins.yml
 ----
-. Deploy Jenkins. The template used is identical to the one used by the `Jenkins` entry in the Openshift Catalog.
+. Expect the playbook to run to completion without failures.
+. Wait until the Jenkins pod is up and running. You can verify this by executing the following `oc` command.
 +
 ----
-$ oc process -f openshift/jenkins/jenkins-persistent.yaml -p MEMORY_LIMIT=1Gi | oc create -f - -n $TOOLS_PRJ
+$ oc project ride-msa-tools-user<lab number>
+$ echo "$(oc get dc jenkins -o template --template='{{.status.readyReplicas}}')"
 ----
++
+image::images/jenkins_check_dc_1.png[]
++
+When the Jenkins pod is up and running, the command returns `1`:
++
+image::images/jenkins_check_dc_2.png[]
++
+Alternatively, check the status of the Jenkins deployment in the OPenShift console. In the OpenShift web console, navigate to the `ride-msa-tools-user<lab number>`. Expect to see a dark blue circle next to the Jenkins deployment as an indication that the Jenkins pod is up and running.
++
+image::images/jenkins_dc_deployed.png[]
+
 . Get the URL for the `jenkins` route:
 +
 ----
-$ echo "https://$(oc get route jenkins -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
+$ echo "https://$(oc get route jenkins -o jsonpath='{.spec.host}')"
 ----
-. Wait until the Jenkins pod is up and running. In a browser window, navigate to the  URL of the Jenkins route. Accept the security exception. Log in with your Openshift username and password. The first time you login, you need to authorize the Jenkins service account access to your Openshift profile. Click `Allow selected permissions`. You are redirected to the Jenkins landing page.
+. In a browser window, navigate to the  URL of the Jenkins route. Accept the security exception. Log in with your Openshift username and password. The first time you login, you need to authorize the Jenkins service account access to your Openshift profile. Click `Allow selected permissions`. You are redirected to the Jenkins landing page.
 +
-WARNING: In the OpenShift lab environment, which has limited resources, the login to jenkins might take several minutes and can eventually time out. If this is the case, you can skip the next step and safely continue with the remainder of the lab - the deployment of the application services.
+WARNING: In the OpenShift lab environment, which has limited resources, the login to jenkins might take a while and can eventually time out. If this is the case, you can skip the next step and safely continue with the remainder of the lab - the deployment of the application services.
 +
 image::images/jenkins_login_1.png[]
 +
@@ -1050,30 +926,15 @@ image::images/jenkins_login_2.png[]
 +
 image::images/jenkins_login_3.png[]
 . Verify that the custom slave build pod template has been registered correctly in Jenkins.
-* On the landing page, select `Manage Jenkins`.
-* On the `Manage Jenkins` page, select `Configure system`.
-* Wait for the configuration page to open (this can sometimes take a while), and scroll down until you find the `Kubernetes section`.
-* Scroll further down until the `images` section, where you see a listing of the builder pod templates. There should be three templates, `maven`, `nodejs` and `maven-with-pvc`.
-* Verify that the `maven-with-pvc` pod template is configured with a persistent volume claim:
+* On the landing page, select _Manage Jenkins_.
+* On the _Manage Jenkins_ page, select _Configure system_.
+* Wait for the configuration page to open (this can sometimes take a while), and scroll down until you find the _Kubernetes_ section.
+* Scroll further down until the _Images_ section, where you see a listing of the builder pod templates. There should be three Kubernetes Pod Templatestemplates, _maven_, _nodejs_ and _maven-with-pvc_.
+* Verify that the _maven-with-pvc_ pod template is configured with a persistent volume claim:
 +
 image::images/jenkins_kubernetes_pod_template_1.png[]
 +
 image::images/jenkins_kubernetes_pod_template_2.png[]
-
-==== Jenkins Ansible installation
-
-If you have Ansible installed, you can run the Ansible playbook provided in the lab material. The playbook executes the same steps as the manual install.
-
-. Make sure you are logged with the `oc` client into your OpenShift environment.
-. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material. Change directory to the `ansible` folder.
-. Run the Jenkins playbook.
-+
-----
-$ cd ansible
-$ ansible-playbook playbooks/jenkins.yml -e project_tools=$TOOLS_PRJ
-----
-. Expect the playbook to run to completion without failures.
-
 
 === Application Services
 
