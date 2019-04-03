@@ -250,6 +250,7 @@ $ git clone https://github.com/rht-summit2019-msa-orchestration/installation.git
 $ git clone https://github.com/rht-summit2019-msa-orchestration/dispatch-service.git
 $ git clone https://github.com/rht-summit2019-msa-orchestration/driver-service.git
 $ git clone https://github.com/rht-summit2019-msa-orchestration/passenger-service.git
+$ git clone https://github.com/rht-summit2019-msa-orchestration/dispatch-service-kjar.git
 ----
 
 NOTE: We highly encourage you to review the source code of the different services. However, please do not import the source code into an IDE during this lab (a text editor like Atom or Sublime is fine). Doing so will cause the IDE to try to build the code, and start downloading missing Maven dependencies. Considering the number of participants in this lab today, this will consume way too much bandwith.
@@ -711,7 +712,8 @@ image::images/kafka_cluster_deployment.png[]
 * If you want to review the Kafka cluster resource, you can get the yaml representation with `oc`:
 +
 ----
-$ oc project kafka-cluster-user<lab number>
+$ export KAFKA_CLUSTER_PRJ=kafka-cluster-user<lab number>
+$ oc project $KAFKA_CLUSTER_PRJ
 $ oc get kafka kafka-cluster -o yaml
 ----
 +
@@ -751,8 +753,8 @@ Just as with the Kafka cluster, you use Ansible playbooks to install these tools
 The Ansible playbook installs the Gogs server, including creating the admin user (`gogsadmin/admin123`), developer user (`developer/developer123`) and organization (`acme`).
 
 . Make sure you are logged with the `oc` client into your OpenShift environment.
-. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material. Change directory to the `ansible` folder.
-. Run the Gogs playbook.
+. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
+. Change directory to the `ansible` folder. Run the `gogs.yml` playbook.
 +
 ----
 $ cd ansible
@@ -765,8 +767,8 @@ image::images/gogs_ansible_playbook_2.png[]
 Get the URL for the `gogs` route:
 +
 ----
-$ oc project ride-msa-tools-user<lab number>
-$ echo "http://$(oc get route gogs -o jsonpath='{.spec.host}')"
+$ export TOOLS_PRJ=ride-msa-tools-user<lab number>
+$ echo "http://$(oc get route gogs -o jsonpath='{.spec.host}') -n $TOOLS_PRJ"
 ----
 . In a web browser window, navigate to the gogs URL. Expect to see the Gogs landing page.
 +
@@ -780,8 +782,8 @@ image::images/gogs_landing_page_organization.png[]
 We use an image from https://www.crunchydata.com[CrunchyData], a US based company offering services around enterprise deployments of PostgreSQL.
 
 . Make sure you are logged with the `oc` client into your OpenShift environment.
-. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material. Change directory to the `ansible` folder.
-. Run the pgAdmin4 playbook.
+. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
+. Change directory to the `ansible` folder. Run the `pgadmin4.yml` playbook.
 +
 ----
 $ cd ansible
@@ -792,8 +794,7 @@ $ ansible-playbook playbooks/pgadmin4.yml
 Get the URL for the `pgadmin4` route:
 +
 ----
-$ oc project ride-msa-tools-user<lab number>
-$ echo "http://$(oc get route pgadmin4 -o jsonpath='{.spec.host}')"
+$ echo "http://$(oc get route pgadmin4 -o jsonpath='{.spec.host}') -n $TOOLS_PRJ"
 ----
 . In a browser window, navigate to the URL of the pgAdmin4 route. Login with `admin@example.com/admin123`. Expect to see the landing page of pgAdmin4.
 +
@@ -897,8 +898,7 @@ $ ansible-playbook playbooks/jenkins.yml
 . Wait until the Jenkins pod is up and running. You can verify this by executing the following `oc` command.
 +
 ----
-$ oc project ride-msa-tools-user<lab number>
-$ echo "$(oc get dc jenkins -o template --template='{{.status.readyReplicas}}')"
+$ echo "$(oc get dc jenkins -o template --template='{{.status.readyReplicas}}') -n $TOOLS_PRJ"
 ----
 +
 image::images/jenkins_check_dc_1.png[]
@@ -907,14 +907,14 @@ When the Jenkins pod is up and running, the command returns `1`:
 +
 image::images/jenkins_check_dc_2.png[]
 +
-Alternatively, check the status of the Jenkins deployment in the OPenShift console. In the OpenShift web console, navigate to the `ride-msa-tools-user<lab number>`. Expect to see a dark blue circle next to the Jenkins deployment as an indication that the Jenkins pod is up and running.
+Alternatively, check the status of the Jenkins deployment in the OpenShift console. In the OpenShift web console, navigate to the `ride-msa-tools-user<lab number>` project. Expect to see a dark blue circle next to the Jenkins deployment as an indication that the Jenkins pod is up and running.
 +
 image::images/jenkins_dc_deployed.png[]
 
 . Get the URL for the `jenkins` route:
 +
 ----
-$ echo "https://$(oc get route jenkins -o jsonpath='{.spec.host}')"
+$ echo "https://$(oc get route jenkins -o jsonpath='{.spec.host}') -n $TOOLS_PRJ"
 ----
 . In a browser window, navigate to the  URL of the Jenkins route. Accept the security exception. Log in with your Openshift username and password. The first time you login, you need to authorize the Jenkins service account access to your Openshift profile. Click `Allow selected permissions`. You are redirected to the Jenkins landing page.
 +
@@ -1054,274 +1054,369 @@ $ git remote add gogs http://developer:developer123@<url of the driver service r
 $ git checkout master
 $ git push -u gogs master
 ----
-. Repeat for the passenger service and the dispatch service source code.
+. Repeat for the passenger service, dispatch service and dispatch-service-kjar source code. +
+When done you should have four projects in the _Acme_ organization in Gogs:
++
+image::images/gogs_projects.png[]
 
 ==== Driver service installation
 
-. Make sure you are logged with the `oc` client into your OpenShift environment.
-. Create a project on OpenShift to deploy the services. The project name has to be unique within the OpenShift cluster, so use `services-` suffixed with your name or another unique identifier.
-+
-----
-$ export SERVICES_PRJ=services-<unique suffix>
-$ oc new-project $SERVICES_PRJ
-----
-. Give the default service account in the project cluster view privileges. This is required because the services use the Kubernetes API to load their configuration configmap.
-+
-----
-$ oc adm policy add-role-to-user view system:serviceaccount:$SERVICES_PRJ:default -n $SERVICES_PRJ
-----
-. Create a configmap with the configuration for the driver service.
-* In a terminal window, change directory to the folder where you cloned the `driver-service` project of the lab material. Change directory to the `etc` folder inside the project.
-* Open the `application-config.yaml` file in a text editor and review its content.
-+
-----
-amqp.host:
-amqp.port: 5671
-amqp.user: user
-amqp.password: password
+In this lab, you use an Ansible playbook to install the different Openshift resources for the Driver service. The playbook installs:
 
-amqp.replyhandling: false
-amqp.ssl: true
-amqp.ssl.trustall: false
-amqp.ssl.verifyhost: true
-amqp.truststore.path: /app/truststore/enmasse.jks
-amqp.truststore.password: password
-
-amqp.consumer.driver-command: topic-driver-command
-amqp.producer.driver-event: topic-driver-event
-amqp.producer.ride-event: topic-ride-event
-
-http.port: 8080
-
-# delay before sending a `DriverAssignedEvent` message
-driver.assigned.min.delay: 1
-driver.assigned.max.delay: 3
-# delay before sending a `RideStartedEvent` message
-ride.started.min.delay: 5
-ride.started.max.delay: 10
-# delay before sending a `RideEndedEvent` message
-ride.ended.min.delay: 5
-ride.ended.max.delay: 10
-----
-+
-** amqp_port: 5671, which corresponds to the amqps protocol
-** amqp_ssl: ssl is used, server certificate is checked and the hostname on the certificate must match
-** amqp.replyhandling: Defines whether the Vert.x amqp bridge should try to enable support for sending messages with a reply handler set, and replying to messages using the message reply methods. Request/reply style messaging is not used in this lab, so this setting can be set to false.
-* Set the `amqp.host` property to the hostname of the EnMasse `messaging` service. +
-The hostname is `messaging.<enmasse project>.svc.cluster.local`, where `<enmasse project>` is the name of the OpenShift project where you installed EnMasse. +
-Save the file.
-* Create a configmap from the `application-config.yaml` file:
-+
-----
-$ oc create configmap driver-service --from-file=application-config.yaml -n $SERVICES_PRJ
-----
-. Create a truststore holding the EnMasse messaging certificate.
-* Extract the EnMasse messaging certificate from the `external-certs-messaging` secret in the EnMasse project"
-+
-----
-$ oc get secret external-certs-messaging -o jsonpath='{.data.tls\.crt}' -n $ENMASSE_PRJ | base64 -d > messaging-cert.pem
-----
-+
-Verify the contents of the `messaging-cert.pem` file.
-+
-----
-$ cat messaging-cert.pem
-----
-+
-.Sample output
-----
------BEGIN CERTIFICATE-----
-MIIDYTCCAkmgAwIBAgIJALwxhMIr5Z/NMA0GCSqGSIb3DQEBCwUAMEcxEzARBgNV
-BAoMCmlvLmVubWFzc2UxMDAuBgNVBAMMJ21lc3NhZ2luZy5lbm1hc3NlLWJ0Mi5z
-dmMuY2x1c3Rlci5sb2NhbDAeFw0xODA4MjIxOTEzNTdaFw00ODEwMDMxOTEzNTda
-MEcxEzARBgNVBAoMCmlvLmVubWFzc2UxMDAuBgNVBAMMJ21lc3NhZ2luZy5lbm1h
-c3NlLWJ0Mi5zdmMuY2x1c3Rlci5sb2NhbDCCASIwDQYJKoZIhvcNAQEBBQADggEP
-ADCCAQoCggEBAMaoTtD0jUrAA7hxXE6kfBlaZ7OOi5HvZnFLDhoUHNGDWkrVzV5l
-VJCpNFLpOir4ILDBfzs8pEQu/vAplmCGPx7MiuhvSWU1YxhZxLuM1Xk9KtUNyawf
-1MGvgIH7wXxAVkSxPmdsmiFfbv0dx1JIHyqOCrtc0KbN+NQcu3Mg+clqjvbG8Lk4
-ndDQVZCk8Ao19ZFk9H64r6WN3mUQD2tDbRWd+Mm8rkPvAT4PwDfgBrutJesiYQms
-ayM4B2zMApquSx4RWSbt5y9iZ6KQOrb55YyTVW9SgQVhaG92J6vQkwDqlipTsCy3
-2LvkbYmzb57iOmzzFzmonHLuZ2CKnDBNcjUCAwEAAaNQME4wHQYDVR0OBBYEFEkN
-8bpQNU35ZCo6RrYV04A1hYnNMB8GA1UdIwQYMBaAFEkN8bpQNU35ZCo6RrYV04A1
-hYnNMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAJKGr6z7PP4jFj3Y
-wa4T0jB2Es/WcXwkrP2BcsYNF8qoPSPPxbqdhvdow0IKVAfMHrIAAVFnaB06J+xq
-MXl2fBd2LV7AujPNIZ3sDL10XglkW0Rtc7cCUFdTc/s+Oca8PrAk8T+eeMzIFeCU
-lZJfpLxF2Le5t/fPy1V4kCMErb5Fm0pl7jO+cMvEXmD8US265A9gKKPuHOeJRm6G
-27ftiIiOBP3ff0RdGtgeWNcaWEz6R+WnrndFCrQrSc+RQddXIZ7KsiCMQCMKRmOq
-pmODbLOVK6tHiQalR3uN2xeo7HBu9mOpExTyLMF78y2KoIUTVcOrhZwyaZFM6+V9
-BXi+Rfk=
------END CERTIFICATE-----
-----
-* Alternatively, you can download the EnMasse messaging certificate from the EnMasse console. Open the EnMasse console in a browser window. On the bottom of the dashboard pane you'll find a link to download the certificate.
-+
-image::images/enmasse_download_certificate.png[]
-* Create a JKS truststore containing the EnMasse certificate with the `keytool` tool. The truststore password is `password`.
-+
-----
-$ keytool -importcert -trustcacerts -file messaging-cert.pem -keystore enmasse.jks -storepass password -noprompt
-----
-. Create a secret with the truststore.
-+
-----
-$ oc create secret generic enmasse-truststore --from-file=enmasse.jks -n $SERVICES_PRJ
-----
-. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-. Review the Openshift templates for the driver service in the `openshift/driver-service` directory:
-* *driver-service-template.yaml*: defines the service and the deployment config for the driver service.
-** The secret with the truststore is mounted in the `app/truststore` directory in the container.
-** There is no need to mount the configmap, as the application uses the Kubernetes API to load the configmap directly.
+* *driver-service-pipeline.yml*: the build pipeline for the driver service. The Jenkinsfile is embedded in the pipeline.
 * *driver-service-binary.yaml*: defines the buildconfig used by the build pipeline to build the image for the service, and the corresponding imagestream.
-* *driver-service-pipeline.yml*: the build pipeline for the driver service. The Jenkins file is embedded in the pipeline.
-. Deploy the templates to OpenShift. Note that the buildconfig and the build pipeline are created in the OpenShift project were Jenkins is deployed.
+* *driver-service-template.yaml*: defines the service and the deployment config for the driver service.
+* The application configmap for the Driver service, containing environment specific properties, and the logging configmap, containing externalized logging configuration for the Driver service.
+
+Feel free to review these resources. They are located in the `openshift/driver-service` folder of the `installation` project. The configmap template can be found in the `ansible/roles/openshift_driver_service/templates` folder.
+
+
+. Make sure you are logged with the `oc` client into your OpenShift environment.
+. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
+. Change to the `ansible` directory, and run the `driver_service.yml` playbook.
 +
 ----
-$ oc process -f openshift/driver-service/driver-service-template.yaml -p APPLICATION_NAME=driver-service -p APPLICATION_CONFIGMAP=driver-service -p APPLICATION_TRUSTSTORE=enmasse-truststore | oc create -f - -n $SERVICES_PRJ
-$ oc process -f openshift/driver-service/driver-service-binary.yaml -p APPLICATION_NAME=driver-service -p IMAGE_STREAM=redhat-openjdk18-openshift:1.4 | oc create -f - -n $TOOLS_PRJ
-$ oc process -f openshift/driver-service/driver-service-pipeline.yaml -p BC_NAME=driver-service-pipeline -p GIT_URL=http://gogs:3000 -p GIT_REPO=acme/driver-service.git -p APP_BUILD=driver-service-binary -p APP_PROJECT=$SERVICES_PRJ -p JENKINS_PROJECT=$TOOLS_PRJ -p APP_IMAGESTREAM=driver-service -p APP_DC=driver-service | oc create -f - -n $TOOLS_PRJ
+$ cd ansible
+$ ansible-playbook playbooks/driver_service.yml
 ----
-. Give the Jenkins service account project admin rights in the services project:
+. Expect the playbook to run to completion without failures.
+. Review the installation:
+* The build pipeline and the binary buildconfig for the driver service are created in the `ride-msa-tools-user<lab number>` project.
 +
 ----
-$ oc adm policy add-role-to-user edit system:serviceaccount:$TOOLS_PRJ:jenkins -n $SERVICES_PRJ
+$ oc get bc -n $TOOLS_PRJ
 ----
-. Start the pipeline for the driver service:
++
+image::images/driver_service_bc.png[]
+* The deploymentconfig and service for the Driver service are created in the `ride-msa-services-user<lab number>` project:
++
+----
+$ export SERVICES_PRJ=ride-msa-services-user<lab number>
+$ oc project $SERVICES_PRJ
+$ oc get dc
+$ oc get services
+----
++
+image::images/driver_service_dc.png[]
+* The configmaps are created in the `ride-msa-services-user<lab number>` project:
++
+----
+$ oc get configmap
+----
++
+image::images/driver_service_configmap.png[]
+* The `driver-service` configmap has the connection details for the kafka cluster:
++
+----
+$ oc get configmap driver-service -o yaml
+----
++
+image::images/driver_service_configmap_details.png[]
+
+. Start the build pipeline for the driver service:
 +
 ----
 $ oc start-build driver-service-pipeline -n $TOOLS_PRJ
 ----
-. Follow the progression of the build pipeline in the OpenShift console. Expect the pipeline to complete succesfully.
+. Follow the progression of the build pipeline in the OpenShift console - In the OpenShift console, navigate to the _ride-msa-tools-user<lab number>_ project, and select _Builds->Pipelines_ from the side menu. +
+Expect the pipeline to complete succesfully.
 +
-image::images/openshift_build_pipeline.png[]
+image::images/driver_service_build_pipeline.png[]
 +
 If the pipeline build fails, check the pipeline build logs to see what went wrong, and if needed fix the issue.
-. Once the pipeline has executed, check that the driver service has deployed successfully.
+. Once the pipeline has executed, check that the driver service has deployed successfully in the _ride-msa-services-user<lab number>_ project.
 +
-image::images/openshift_service_deployed.png[]
+image::images/driver_service_deployed.png[]
 . In the OpenShift console, navigate to the driver service pod, and check the logs of the pod. Alternatively you can use `oc logs -f <name of the pod>`. +
 Expect to see something like:
 +
 ----
 Starting the Java application using /opt/run-java/run-java.sh ...
-exec java -Dapplication.configmap=driver-service -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory -Xms63m -Xmx250m -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+UseParallelOldGC -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -XX:MaxMetaspaceSize=100m -XX:ParallelGCThreads=1 -Djava.util.concurrent.ForkJoinPool.common.parallelism=1 -XX:CICompilerCount=2 -XX:+ExitOnOutOfMemoryError -cp . -jar /deployments/driver-service-simulator-1.0-SNAPSHOT.jar
-2018-08-25 12:57:36.883  INFO   --- [ntloop-thread-3] MessageProducer                          : AMQP bridge to messaging.enmasse-bt.svc.cluster.local:5671 started
-2018-08-25 12:57:36.883  INFO   --- [ntloop-thread-2] MessageConsumer                          : AMQP bridge to messaging.enmasse-bt.svc.cluster.local:5671 started
-2018-08-25 12:57:36.893  INFO   --- [ntloop-thread-0] c.a.r.d.service.simulator.MainVerticle   : Verticles deployed successfully.
-2018-08-25 12:57:36.894  INFO   --- [ntloop-thread-4] i.v.c.i.l.c.VertxIsolatedDeployer        : Succeeded in deploying verticle
+exec java -Dapplication.configmap=driver-service -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory -Dlogback.configurationFile=/app/logging/logback.xml -Xms63m -Xmx250m -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+UseParallelOldGC -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -XX:MaxMetaspaceSize=100m -XX:ParallelGCThreads=1 -Djava.util.concurrent.ForkJoinPool.common.parallelism=1 -XX:CICompilerCount=2 -XX:+ExitOnOutOfMemoryError -cp . -jar /deployments/driver-service-1.0-SNAPSHOT.jar
+2019-04-03 08:15:13.241  INFO   --- [ntloop-thread-2] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values:
+
+...
+
+2019-04-03 08:15:13.637  INFO   --- [ntloop-thread-3] o.a.kafka.common.utils.AppInfoParser     : Kafka version : 1.0.0
+2019-04-03 08:15:13.637  INFO   --- [ntloop-thread-3] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId : aaa7af6d4a11b29d
+2019-04-03 08:15:13.656  INFO   --- [ntloop-thread-2] o.a.kafka.common.utils.AppInfoParser     : Kafka version : 1.0.0
+2019-04-03 08:15:13.656  INFO   --- [ntloop-thread-2] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId : aaa7af6d4a11b29d
+2019-04-03 08:15:13.743  INFO   --- [ntloop-thread-0] c.acme.ride.driver.service.MainVerticle  : Verticles deployed successfully.
+2019-04-03 08:15:13.743  INFO   --- [ntloop-thread-4] i.v.c.i.l.c.VertxIsolatedDeployer        : Succeeded in deploying verticle
+2019-04-03 08:15:38.187  INFO   --- [nsumer-thread-0] o.a.k.c.c.internals.AbstractCoordinator  : [Consumer clientId=consumer-1, groupId=driver-service] Discovered coordinator kafka-cluster-kafka-0.kafka-cluster-kafka-brokers.kafka-cluster-user2.svc.cluster.local:9092 (id: 2147483647 rack: null)
+2019-04-03 08:15:38.189  INFO   --- [nsumer-thread-0] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-1, groupId=driver-service] Revoking previously assigned partitions []
+2019-04-03 08:15:38.190  INFO   --- [nsumer-thread-0] o.a.k.c.c.internals.AbstractCoordinator  : [Consumer clientId=consumer-1, groupId=driver-service] (Re-)joining group
+2019-04-03 08:15:38.201  INFO   --- [nsumer-thread-0] o.a.k.c.c.internals.AbstractCoordinator  : [Consumer clientId=consumer-1, groupId=driver-service] Marking the coordinator kafka-cluster-kafka-0.kafka-cluster-kafka-brokers.kafka-cluster-user2.svc.cluster.local:9092 (id: 2147483647 rack: null) dead
+2019-04-03 08:15:38.509  INFO   --- [nsumer-thread-0] o.a.k.c.c.internals.AbstractCoordinator  : [Consumer clientId=consumer-1, groupId=driver-service] Discovered coordinator kafka-cluster-kafka-0.kafka-cluster-kafka-brokers.kafka-cluster-user2.svc.cluster.local:9092 (id: 2147483647 rack: null)
+
+...
+
+
+2019-04-03 08:15:44.713  INFO   --- [nsumer-thread-0] o.a.k.c.c.internals.AbstractCoordinator  : [Consumer clientId=consumer-1, groupId=driver-service] (Re-)joining group
+2019-04-03 08:15:47.799  INFO   --- [nsumer-thread-0] o.a.k.c.c.internals.AbstractCoordinator  : [Consumer clientId=consumer-1, groupId=driver-service] Successfully joined group with generation 1
+2019-04-03 08:15:47.801  INFO   --- [nsumer-thread-0] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-1, groupId=driver-service] Setting newly assigned partitions [topic-driver-command-6, topic-driver-command-7, topic-driver-command-8, topic-driver-command-9, topic-driver-command-10, topic-driver-command-11, topic-driver-command-12, topic-driver-command-13, topic-driver-command-14, topic-driver-command-0, topic-driver-command-1, topic-driver-command-2, topic-driver-command-3, topic-driver-command-4, topic-driver-command-5]
 ----
 
 ==== Passenger service installation
 
 The procedure is equivalent to the driver service.
 
-. Create a configmap with the configuration for the passenger service.
-* In a terminal window, change directory to the folder where you cloned the `passenger-service` project of the lab material. Change directory to the `etc` folder inside the project.
-* Open the `application.properties` file in a text editor and review its content.
-+
-----
-amqp.host=
-amqp.port=5671
-amqp.query=transport.trustAll=false&transport.verifyHost=true
-amqphub.amqp10jms.remote-url=amqps://${amqp.host}:${amqp.port}?${amqp.query}
-amqphub.amqp10jms.username=user
-amqphub.amqp10jms.password=password
-amqphub.amqp10jms.pool.enabled=true
-amqphub.amqp10jms.pool.explicit-producer-cache-size=10
-amqphub.amqp10jms.pool.use-anonymous-producers=false
-
-spring.jms.pub-sub-domain=True
-spring.jms.session-cache-size=10
-spring.jms.transacted=True
-spring.jms.subscription-shared=True
-spring.jms.subscription-durable=True
-
-spring.jms.listener.concurrency=20
-spring.jms.listener.max-concurrency=20
-
-sender.destination.ride-requested=topic-ride-event
-sender.destination.passenger-canceled=topic-passenger-event
-
-listener.destination.driver-assigned=topic-driver-event
-listener.subscription.driver-assigned=passenger-service
-
-logging.level.com.acme.ride=DEBUG
-----
-+
-** amqp.port: 5671, which corresponds to the amqps protocol
-** amqp.query: server certificate is checked and the hostname on the certificate must match
-** amqphub.amqp10jms.pool.use-anonymous-producers: message producers are created and cached per destination
-
-* Set the `amqp.host` property to the hostname of the EnMasse `messaging` service. +
-Save the file.
-* Create a configmap from the `application.properties` file:
-+
-----
-$ oc create configmap passenger-service --from-file=application.properties -n $SERVICES_PRJ
-----
-** Note that the name of the configmap corresponds to the `spring.application.name` value in the `src/main/resources/application.properties` properties file. The _spring_kubernetes_config_ module uses the name specified in `spring.application.name` to load the configmap and apply the properties.
-
+. Make sure you are logged with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-. Review the Openshift templates for the passenger service in the `openshift/passenger-service` directory:
-* *passenger-service-template.yaml*: defines the route, service service and the deployment config for the passenger service.
-** The secret with the truststore is mounted in the `app/truststore` directory in the container.
-** There is no need to mount the configmap, as the application uses the Kubernetes API to load the configmap directly.
-* *passenger-service-binary.yaml*: defines the buildconfig used by the build pipeline to build the image for the service, and the corresponding imagestream.
-* *passenger-service-pipeline.yml*: the build pipeline for the passenger service. The Jenkins file is embedded in the pipeline.
-. Deploy the templates to OpenShift. Note that the buildconfig and the build pipeline are created in the OpenShift project were Jenkins is deployed.
+. Change to the `ansible` directory, and run the `passenger_service.yml` playbook.
 +
 ----
-$ oc process -f openshift/passenger-service/passenger-service-template.yaml -p APPLICATION_NAME=passenger-service -p APPLICATION_CONFIGMAP=passenger-service -p APPLICATION_TRUSTSTORE=enmasse-truststore | oc create -f - -n $SERVICES_PRJ
-$ oc process -f openshift/passenger-service/passenger-service-binary.yaml -p APPLICATION_NAME=passenger-service -p IMAGE_STREAM=redhat-openjdk18-openshift:1.4 | oc create -f - -n $TOOLS_PRJ
-$ oc process -f openshift/passenger-service/passenger-service-pipeline.yaml -p BC_NAME=passenger-service-pipeline -p GIT_URL=http://gogs:3000 -p GIT_REPO=acme/passenger-service.git -p APP_BUILD=passenger-service-binary -p APP_PROJECT=$SERVICES_PRJ -p JENKINS_PROJECT=$TOOLS_PRJ -p APP_IMAGESTREAM=passenger-service -p APP_DC=passenger-service | oc create -f - -n $TOOLS_PRJ
+$ cd ansible
+$ ansible-playbook playbooks/passenger_service.yml
 ----
-. Start the pipeline for the passenger service:
+. Expect the playbook to run to completion without failures.
+. Review the installation:
+* The build pipeline and the binary buildconfig for the Passenger service are created in the tools project.
++
+----
+$ oc get bc -n $TOOLS_PRJ
+----
++
+image::images/passenger_service_bc.png[]
+* The deploymentconfig and service for the Passenger service are created in the services project:
++
+----
+$ oc get dc -n $SERVICES_PRJ
+$ oc get service -n $SERVICES_PRJ
+----
++
+image::images/passenger_service_dc.png[]
+* The configmaps are created in the `ride-msa-services-user<lab number>` project:
++
+----
+$ oc get configmap -n $SERVICES_PRJ
+----
++
+image::images/passenger_service_configmap.png[]
+* The `passenger-service` configmap has the connection details for the kafka cluster:
++
+----
+$ oc get configmap passenger-service -o yaml -n $SERVICES_PRJ
+----
++
+image::images/passenger_service_configmap_details.png[]
+
+. Start the build pipeline for the passenger service:
 +
 ----
 $ oc start-build passenger-service-pipeline -n $TOOLS_PRJ
 ----
 . Follow the progression of the build pipeline in the OpenShift console. Expect the pipeline to complete successfully. +
 If the pipeline build fails, check the pipeline build logs to see what went wrong, and if needed fix the issue.
++
+image::images/passenger_service_build_pipeline.png[]
 . Once the pipeline has executed, check that the passenger service has deployed successfully.
 +
-image::images/openshift_service_deployed_1.png[]
+image::images/passenger_service_deployed.png[]
 . In the OpenShift console, navigate to the passenger service pod, and check the logs of the pod. Alternatively you can use `oc logs -f <name of the pod>`. +
-The last lines of the log look like:
+Expect to see something like:
 +
 ----
-2018-08-26 13:16:17.341  INFO 1 --- [           main] o.s.j.e.a.AnnotationMBeanExporter        : Located managed bean 'restartEndpoint': registering with JMX server as MBean [org.springframework.cloud.context.restart:name=restartEndpoint,type=RestartEndpoint]
-2018-08-26 13:16:17.346  INFO 1 --- [           main] o.s.j.e.a.AnnotationMBeanExporter        : Located managed bean 'refreshScope': registering with JMX server as MBean [org.springframework.cloud.context.scope.refresh:name=refreshScope,type=RefreshScope]
-2018-08-26 13:16:17.355  INFO 1 --- [           main] o.s.j.e.a.AnnotationMBeanExporter        : Located managed bean 'configurationPropertiesRebinder': registering with JMX server as MBean [org.springframework.cloud.context.properties:name=configurationPropertiesRebinder,context=56a6d5a6,type=ConfigurationPropertiesRebinder]
-2018-08-26 13:16:17.437  INFO 1 --- [           main] o.s.j.e.a.AnnotationMBeanExporter        : Located managed bean 'refreshEndpoint': registering with JMX server as MBean [org.springframework.cloud.endpoint:name=refreshEndpoint,type=RefreshEndpoint]
-2018-08-26 13:16:17.740  INFO 1 --- [           main] o.s.c.support.DefaultLifecycleProcessor  : Starting beans in phase 0
-2018-08-26 13:16:17.839  INFO 1 --- [           main] o.s.c.support.DefaultLifecycleProcessor  : Starting beans in phase 2147483647
-2018-08-26 13:16:18.846  INFO 1 --- [ter.local:5671]] o.a.qpid.jms.sasl.SaslMechanismFinder    : Best match for SASL auth was: SASL-PLAIN
-2018-08-26 13:16:19.117  INFO 1 --- [ter.local:5671]] org.apache.qpid.jms.JmsConnection        : Connection ID:2ee56c66-b121-4385-9bbb-8ed678f8da0b:1 connected to remote Broker: amqps://messaging.enmasse-bt.svc.cluster.local:5671?transport.trustAll=false&transport.verifyHost=true
-2018-08-26 13:16:19.149  INFO 1 --- [           main] s.b.c.e.t.TomcatEmbeddedServletContainer : Tomcat started on port(s): 8080 (http)
-2018-08-26 13:16:19.152  INFO 1 --- [           main] c.a.r.p.PassengerServiceApplication      : Started PassengerServiceApplication in 15.507 seconds (JVM running for 17.565)
+Starting the Java application using /opt/run-java/run-java.sh ...
+exec java -Xms63m -Xmx250m -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+UseParallelOldGC -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -XX:MaxMetaspaceSize=100m -XX:ParallelGCThreads=1 -Djava.util.concurrent.ForkJoinPool.common.parallelism=1 -XX:CICompilerCount=2 -XX:+ExitOnOutOfMemoryError -cp . -jar /deployments/passenger-service-1.0-SNAPSHOT.jar
+2019-04-03 10:09:41.997  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration$$EnhancerBySpringCGLIB$$8052c8bc] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::        (v2.1.3.RELEASE)
+
+2019-04-03 10:09:43.078  INFO 1 --- [           main] b.c.PropertySourceBootstrapConfiguration : Located property source: CompositePropertySource {name='composite-configmap', propertySources=[ConfigMapPropertySource {name='configmap.passenger-service.ride-msa-services-user2'}]}
+2019-04-03 10:09:43.080  INFO 1 --- [           main] b.c.PropertySourceBootstrapConfiguration : Located property source: SecretsPropertySource {name='secrets.passenger-service.ride-msa-services-user2'}
+2019-04-03 10:09:43.580  INFO 1 --- [           main] c.a.r.p.PassengerServiceApplication      : The following profiles are active: kubernetes
+2019-04-03 10:09:46.388  INFO 1 --- [           main] o.s.cloud.context.scope.GenericScope     : BeanFactory id=04d88a13-67ae-37d7-aa71-cb4e4f032837
+2019-04-03 10:09:46.573  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.kafka.annotation.KafkaBootstrapConfiguration' of type [org.springframework.kafka.annotation.KafkaBootstrapConfiguration$$EnhancerBySpringCGLIB$$37ead742] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2019-04-03 10:09:46.687  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration$$EnhancerBySpringCGLIB$$8052c8bc] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2019-04-03 10:09:47.796  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 8080 (http)
+2019-04-03 10:09:47.976  INFO 1 --- [           main] o.a.coyote.http11.Http11NioProtocol      : Initializing ProtocolHandler ["http-nio-8080"]2019-04-03 10:09:47.991  INFO 1 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2019-04-03 10:09:47.992  INFO 1 --- [           main] org.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/9.0.16]
+2019-04-03 10:09:48.085  INFO 1 --- [           main] o.a.catalina.core.AprLifecycleListener   : The APR based Apache Tomcat Native library which allows optimal performance in production environments was not found on the java.library.path: [/usr/java/packages/lib/amd64:/usr/lib64:/lib64:/lib:/usr/lib]2019-04-03 10:09:48.584  INFO 1 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2019-04-03 10:09:48.584  INFO 1 --- [           main] o.s.web.context.ContextLoader            : Root WebApplicationContext: initialization completed in 4992 ms
+2019-04-03 10:09:51.278  INFO 1 --- [           main] org.apache.cxf.endpoint.ServerImpl       : Setting the server's publish address to be /
+2019-04-03 10:09:52.578  INFO 1 --- [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values:
+
+...
+
+2019-04-03 10:09:58.581  INFO 1 --- [ntainer#0-3-C-1] org.apache.kafka.clients.Metadata        : Cluster ID: nIsKvmg7TluR7fXYncaZjA
+2019-04-03 10:09:58.581  INFO 1 --- [ntainer#0-3-C-1] o.a.k.c.c.internals.AbstractCoordinator  : [Consumer clientId=consumer-5, groupId=passenger-service] Discovered group coordinator kafka-cluster-kafka-0.kafka-cluster-kafka-brokers.kafka-cluster-user2.svc.cluster.local:9092 (id:
+2147483647 rack: null)
+2019-04-03 10:09:58.582  INFO 1 --- [ntainer#0-3-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-5, groupId=passenger-service] Revoking previously assigned partitions []
+2019-04-03 10:09:58.582  INFO 1 --- [ntainer#0-3-C-1] o.s.k.l.KafkaMessageListenerContainer    : partitions revoked: []
+2019-04-03 10:09:58.582  INFO 1 --- [ntainer#0-3-C-1] o.a.k.c.c.internals.AbstractCoordinator  : [Consumer clientId=consumer-5, groupId=passenger-service] (Re-)joining group
+2019-04-03 10:09:58.584  INFO 1 --- [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version : 2.0.1
+2019-04-03 10:09:58.584  INFO 1 --- [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId : fa14705e51bd2ce5
+2019-04-03 10:09:58.584  INFO 1 --- [           main] o.s.s.c.ThreadPoolTaskScheduler          : Initializing ExecutorService
+2019-04-03 10:09:58.677  INFO 1 --- [ntainer#0-4-C-1] org.apache.kafka.clients.Metadata        : Cluster ID: nIsKvmg7TluR7fXYncaZjA
+2019-04-03 10:09:58.677  INFO 1 --- [ntainer#0-4-C-1] o.a.k.c.c.internals.AbstractCoordinator  : [Consumer clientId=consumer-6, groupId=passenger-service] Discovered group coordinator kafka-cluster-kafka-0.kafka-cluster-kafka-brokers.kafka-cluster-user2.svc.cluster.local:9092 (id:
+2147483647 rack: null)
+2019-04-03 10:09:58.678  INFO 1 --- [ntainer#0-4-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-6, groupId=passenger-service] Revoking previously assigned partitions[]
+2019-04-03 10:09:58.679  INFO 1 --- [ntainer#0-4-C-1] o.s.k.l.KafkaMessageListenerContainer    : partitions revoked: []
+2019-04-03 10:09:58.679  INFO 1 --- [ntainer#0-4-C-1] o.a.k.c.c.internals.AbstractCoordinator  : [Consumer clientId=consumer-6, groupId=passenger-service] (Re-)joining group
+2019-04-03 10:09:58.683  INFO 1 --- [           main] o.a.coyote.http11.Http11NioProtocol      : Starting ProtocolHandler ["http-nio-8080"]
+2019-04-03 10:09:58.795  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8080 (http) with context path ''
+2019-04-03 10:09:58.797  INFO 1 --- [           main] c.a.r.p.PassengerServiceApplication      : Started PassengerServiceApplication in 26.119 seconds (JVM running for 28.202)
 ----
 
 ==== Dispatch service installation
 
-The main difference between the dispatch service and the other services is the use of a database for the embedded process engine. We use PostgreSQL as database, and create the schema for the process engine and the application domain model using an init container.
+The main difference between the dispatch service and the other services is the use of a PostgreSQL database for the embedded process engine.
 
-. Create a configmap for the database initialization scripts.
-* In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-* Review the scripts in the `openshift/dispatch-service/postgresql` directory. These scripts will execute in the init container.
-** wait_for_postgresql.sh: script that loops until the PostgreSQL database is up.
-** create_rhpam_database.sh: executes the sql ddl scripts.
-** postgresql-jbpm-schema.sql, postgresql-jbpm-schema.sql, quartz_tables_postgres.sql: sql ddl scripts to create the schema for the embedded process engine, including the tables for the quartz scheduler.
-** ride-schema.sql: sql ddl script for the `Ride` entity.
-* Create a configmap with the scripts:
+The Ansible playbook for the Dispatch service will also take care of deploying and configuring the PostgreSQL database, including creating the schema for the proces engine.
+
+Another aspect which is specific for the Dispatch service, is the fact that it depends on the Dispatch Process kjar, which contains the dispatch process definition. +
+To keep things simple, we build the kjar as part of the Dispatch service build pipeline. In a more real-life setup, the kjar would have its own build pipeline which publishes the kjar into a repository, from where the dispatch service build pipeline would download it and add to its dependencies.
+
+
+. Make sure you are logged with the `oc` client into your OpenShift environment.
+. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
+. Change to the `ansible` directory, and run the `dispatch_service.yml` playbook.
 +
 ----
-$ oc create configmap dispatch-service-postgresql-init --from-file=openshift/dispatch-service/postgresql -n $SERVICES_PRJ
+$ cd ansible
+$ ansible-playbook playbooks/dispatch_service.yml
 ----
-. Review the `openshift/dispatch-service-postgresql/postgresql-persistent-template.yaml` template. Notice the use of the init-container in the `spec.strategy.recreateParams.execNewPod` section of the deployment config.
-. Deploy PostgreSQL using the template:
+. Expect the playbook to run to completion without failures. Note that the playbook pauses until the PostgresQL database is up and running.
+. Review the installation:
+* A Postgresql pod is running in the services project:
 +
 ----
-$ oc new-app -f openshift/dispatch-service/postgresql-persistent-template.yaml --param=APPLICATION_NAME=dispatch-service --param=DATABASE_SERVICE_NAME=dispatch-service-postgresql --param=POSTGRESQL_USER=jboss --param=POSTGRESQL_PASSWORD=jboss --param=POSTGRESQL_DATABASE=rhpam --param=POSTGRESQL_MAX_CONNECTIONS=100 --param=POSTGRESQL_MAX_PREPARED_TRANSACTIONS=100 -n $SERVICES_PRJ
+$ oc get pods -n $SERVICES_PRJ
 ----
-. When the PostgreSQL pod is up and running, verify that the database schema has been creaed correctly.
++
+image::images/dispatch_service_postgresq_pod.png[]
+* The build pipeline and the binary buildconfig for the Dispatch service are created in the tools project.
++
+----
+$ oc get bc -n $TOOLS_PRJ
+----
++
+image::images/dispatch_service_bc.png[]
+* The deploymentconfig and service for the Dispatch service and the database are created in the services project:
++
+----
+$ oc get dc -n $SERVICES_PRJ
+$ oc get services -n $SERVICES_PRJ
+----
++
+image::images/dispatch_service_dc.png[]
+* The configmaps are created in the services project:
++
+----
+$ oc get configmap -n $SERVICES_PRJ
+----
++
+image::images/dispatch_service_configmap.png[]
++
+Note: the `dispatch-service-postgresql-init` configmap contains the ddl scripts for the database schema.
+* The `dispatch-service` configmap has the connection details for the kafka cluster, settings for the database connection pool and the configuration for the Quartz scheduler (used by the process engine to schedule timers and jobs):
++
+----
+$ oc get configmap dispatch-service -o yaml -n $SERVICES_PRJ
+----
++
+image::images/dispatch_service_configmap_details.png[]
+
+. Start the build pipeline for the dispatch service:
++
+----
+$ oc start-build dispatch-service-pipeline -n $TOOLS_PRJ
+----
+. Follow the progression of the build pipeline in the OpenShift console. Expect the pipeline to complete successfully. +
+If the pipeline build fails, check the pipeline build logs to see what went wrong, and if needed fix the issue.
++
+image::images/dispatch_service_build_pipeline.png[]
+. Once the pipeline has executed, check that the dispatch service has deployed successfully.
++
+image::images/dispatch_service_deployed.png[]
+. In the OpenShift console, navigate to the dispatch service pod, and check the logs of the pod. Alternatively you can use `oc logs -f <name of the pod>`. +
+Expect to see something like:
++
+----
+Starting the Java application using /opt/run-java/run-java.sh ...
+exec java -Xms128m -Xmx512m -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+UseParal
+lelOldGC -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90
+-XX:MaxMetaspaceSize=200m -XX:ParallelGCThreads=1 -Djava.util.concurrent.ForkJoinPool.common.parallelism=1
+-XX:CICompilerCount=2 -XX:+ExitOnOutOfMemoryError -cp . -jar /deployments/dispatch-service-1.0-SNAPSHOT.jar
+2019-04-03 16:39:59.011  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.
+springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springfr
+amework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration$$EnhancerBySpringCGLIB$$85aef5
+80] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-pro
+xying)
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::        (v2.1.3.RELEASE)
+
+2019-04-03 16:40:00.217  INFO 1 --- [           main] b.c.PropertySourceBootstrapConfiguration : Located pr
+operty source: CompositePropertySource {name='composite-configmap', propertySources=[ConfigMapPropertySourc
+e {name='configmap.dispatch-service.ride-msa-services-user2'}]}
+2019-04-03 16:40:00.219  INFO 1 --- [           main] b.c.PropertySourceBootstrapConfiguration : Located pr
+operty source: SecretsPropertySource {name='secrets.dispatch-service.ride-msa-services-user2'}
+2019-04-03 16:40:00.811  INFO 1 --- [           main] c.a.r.d.DispatchServiceApplication       : The follow
+ing profiles are active: kubernetes
+2019-04-03 16:40:07.213  INFO 1 --- [           main] o.s.cloud.context.scope.GenericScope     : BeanFactor
+y id=661898ce-738a-3698-afcb-59c040e1435d
+2019-04-03 16:40:07.311  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.
+springframework.kafka.annotation.KafkaBootstrapConfiguration' of type [org.springframework.kafka.annotation
+.KafkaBootstrapConfiguration$$EnhancerBySpringCGLIB$$3d470406] is not eligible for getting processed by all
+ BeanPostProcessors (for example: not eligible for auto-proxying)
+2019-04-03 16:40:07.715  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.
+springframework.transaction.annotation.ProxyTransactionManagementConfiguration' of type [org.springframewor
+k.transaction.annotation.ProxyTransactionManagementConfiguration$$EnhancerBySpringCGLIB$$6994f283] is not e
+ligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2019-04-03 16:40:07.813  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.
+springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springfr
+amework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration$$EnhancerBySpringCGLIB$$85aef5
+80] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-pro
+xying)
+2019-04-03 16:40:09.225  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat ini
+tialized with port(s): 8080 (http)
+2019-04-03 16:40:09.324  INFO 1 --- [           main] o.a.coyote.http11.Http11NioProtocol      : Initializi
+ng ProtocolHandler ["http-nio-8080"]
+2019-04-03 16:40:09.337  INFO 1 --- [           main] o.apache.catalina.core.StandardService   : Starting s
+ervice [Tomcat]
+2019-04-03 16:40:09.337  INFO 1 --- [           main] org.apache.catalina.core.StandardEngine  : Starting S
+ervlet engine: [Apache Tomcat/9.0.16]
+
+...
+
+2019-04-03 16:41:07.905  INFO 1 --- [           main] org.quartz.impl.StdSchedulerFactory      : Using default implementation for ThreadExecutor
+2019-04-03 16:41:07.930  INFO 1 --- [           main] org.quartz.core.SchedulerSignalerImpl    : Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
+2019-04-03 16:41:07.931  INFO 1 --- [           main] org.quartz.core.QuartzScheduler          : Quartz Scheduler v.2.3.0 created.
+2019-04-03 16:41:07.932  INFO 1 --- [           main] o.quartz.impl.jdbcjobstore.JobStoreCMT   : Using db table-based data access locking (synchronization).
+2019-04-03 16:41:07.936  INFO 1 --- [           main] o.quartz.impl.jdbcjobstore.JobStoreCMT   : JobStoreCMT initialized.
+2019-04-03 16:41:08.005  INFO 1 --- [           main] org.quartz.core.QuartzScheduler          : Scheduler
+meta-data: Quartz Scheduler (v2.3.0) 'SpringBootScheduler' with instanceId 'dispatch-service-1-5p9c61554309667909'
+  Scheduler class: 'org.quartz.core.QuartzScheduler' - running locally.
+  NOT STARTED.
+  Currently in standby mode.
+  Number of jobs executed: 0
+  Using thread pool 'org.quartz.simpl.SimpleThreadPool' - with 20 threads.
+  Using job-store 'org.quartz.impl.jdbcjobstore.JobStoreCMT' - which supports persistence. and is clustered.
+
+2019-04-03 16:41:08.005  INFO 1 --- [           main] org.quartz.impl.StdSchedulerFactory      : Quartz scheduler 'SpringBootScheduler' initialized from specified file: '/app/config/jbpm-quartz.properties'
+2019-04-03 16:41:08.005  INFO 1 --- [           main] org.quartz.impl.StdSchedulerFactory      : Quartz scheduler version: 2.3.0
+2019-04-03 16:41:08.030  INFO 1 --- [           main] c.a.r.d.DispatchServiceApplication       : dispatch-process
+2019-04-03 16:41:09.828  INFO 1 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2019-04-03 16:41:09.828  INFO 1 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2019-04-03 16:41:09.839  INFO 1 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed
+initialization in 11 ms
+2019-04-03 16:41:10.410  INFO 1 --- [       Thread-6] org.quartz.core.QuartzScheduler          : Scheduler
+SpringBootScheduler_$_dispatch-service-1-5p9c61554309667909 started.
+----
+
+. Verify that the database schema has been created correctly.
 * In a browser window, navigate to the URL of the pgAdmin4 route. Log in with `admin@example.com/admin123`
 * Click on the `Add new Server` link on the landing page.
 * In the `Create Server` dialog box, enter `rhpam` as Server name.
@@ -1338,173 +1433,6 @@ image::images/pgadmin4_browser.png[]
 +
 image::images/pgadmin4_browser_2.png[]
 * Expect to see the tables of the RHPAM schema. Verify that the list also contains a table `Ride`.
-
-. In the case the pgadmin4 application is not working as expected, you can do the following to check that the `Ride` table has been created:
-* In a terminal window, set the current project to the services project:
-+
-----
-$ oc project $SERVICES_PRJ
-----
-* Locate the postgresql pod:
-+
-----
-$ POSTGRESQL_POD=$(oc get pods | grep dispatch-service-postgresql  | awk '{print $1}')
-----
-* `oc rsh` into the postgresql pod:
-+
-----
-$ oc rsh $POSTGRESQL_POD
-sh-4.2$
-----
-* Open the `psql` tool, and connect to the `rhpam` database and verify that the `Ride` table exists:
-+
-----
-sh-4.2$ psql
-psql (9.6.10)
-Type "help" for help.
-
-postgres=# \c rhpam
-You are now connected to database "rhpam" as user "postgres".
-rhpam=# \dt ride
-       List of relations
- Schema | Name | Type  | Owner
---------+------+-------+-------
- public | ride | table | jboss
-(1 row)
-----
-+
-Type /q to quit `psql`
-+
-----
-rhpam=# \q
-----
-. Create a configmap with the configuration for the dispatch service.
-* In a terminal window, change directory to the folder where you cloned the `dispatch-service` project of the lab material. Change directory to the `etc` folder inside the project.
-* Open the `application.properties` file in a text editor and review its content.
-+
-----
-postgresql.host=
-amqp.host=
-
-spring.datasource.username=jboss
-spring.datasource.password=jboss
-spring.datasource.url=jdbc:postgresql://${postgresql.host}:5432/rhpam
-
-narayana.dbcp.maxTotal=20
-
-amqp.port=5671
-amqp.query=transport.trustAll=false&transport.verifyHost=true
-amqphub.amqp10jms.remote-url=amqps://${amqp.host}:${amqp.port}?${amqp.query}
-amqphub.amqp10jms.username=user
-amqphub.amqp10jms.password=password
-amqphub.amqp10jms.pool.enabled=true
-amqphub.amqp10jms.pool.explicit-producer-cache-size=10
-amqphub.amqp10jms.pool.use-anonymous-producers=false
-
-spring.jms.pub-sub-domain=True
-spring.jms.transacted=True
-spring.jms.subscription-shared=True
-spring.jms.subscription-durable=True
-
-spring.jms.listener.concurrency=20
-spring.jms.listener.max-concurrency=20
-
-listener.destination.ride-event=topic-ride-event
-listener.subscription.ride-event=dispatch-ride
-
-listener.destination.driver-assigned-event=topic-driver-event
-listener.subscription.driver-assigned-event=dispatch-driver
-
-listener.destination.passenger-canceled-event=topic-passenger-event
-listener.subscription.passenger-canceled-event=dispatch-passenger
-
-send.destination.assign_driver_command=topic-driver-command
-
-send.destination.handle_payment_command=topic-passenger-command
-
-dispatch.assign.driver.expire.duration=5M
-
-logging.level.org.jbpm.executor.impl=WARN
-logging.level.com.acme.ride=DEBUG
-----
-* narayana.dbcp.maxTotal: maximum number of connections in the datasource connection pool managed by the Naryana transaction manager.
-* Set the `amqp.host` property to the hostname of the EnMasse `messaging` service.
-* Set the `postgresql.host` property to the hostname of the PostgreSQL service. +
-As the PostgreSQL database is deployed in the same OpenShift project as the application, you can use the service name: `dispatch-service-postgresql`.
-* Save the file.
-* Create a configmap from the `application.properties` and the `jbpm-quartz.properties` file:
-+
-----
-$ oc create configmap dispatch-service --from-file=application.properties --from-file=jbpm-quartz.properties -n $SERVICES_PRJ
-----
-** Note that the name of the configmap corresponds to the `spring.application.name` value in the `src/main/resources/application.properties` properties file. The _spring_kubernetes_config_ module uses the name specified in `spring.application.name` to load the configmap and apply the properties.
-** The `jbpm-quartz.properties` is the configuration file for the Quartz scheduler. The scheduler is set up for clustered use, ensuring that only 1 node in the cluster can fire a job.
-. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-. Review the Openshift templates for the dispatch service in the `openshift/dispatch-service` directory:
-* *dispatch-service-template.yaml*: defines the route, service and the deploymentconfig for the dispatch service.
-** The secret with the truststore is mounted in the `app/truststore` directory in the container.
-** The configmap is mounted in the `/app/config` directory. The dispatch service is started with the Java system property `org.quartz.properties` pointing to the `jbpm-quartz.properties` properties file.
-* *dispatch-service-binary.yaml*: defines the buildconfig used by the build pipeline to build the image for the service, and the corresponding imagestream.
-* *dispatch-service-pipeline.yml*: the build pipeline for the dispatch service. The Jenkins file is embedded in the pipeline.
-. Deploy the templates to OpenShift. Note that the buildconfig and the build pipeline are created in the OpenShift project were Jenkins is deployed.
-+
-----
-$ oc process -f openshift/dispatch-service/dispatch-service-template.yaml -p APPLICATION_NAME=dispatch-service -p APPLICATION_CONFIGMAP=dispatch-service -p APPLICATION_TRUSTSTORE=enmasse-truststore | oc create -f - -n $SERVICES_PRJ
-$ oc process -f openshift/dispatch-service/dispatch-service-binary.yaml -p APPLICATION_NAME=dispatch-service -p IMAGE_STREAM=redhat-openjdk18-openshift:1.4 | oc create -f - -n $TOOLS_PRJ
-$ oc process -f openshift/dispatch-service/dispatch-service-pipeline.yaml -p BC_NAME=dispatch-service-pipeline -p GIT_URL=http://gogs:3000 -p GIT_REPO=acme/dispatch-service.git -p APP_BUILD=dispatch-service-binary -p APP_PROJECT=$SERVICES_PRJ -p JENKINS_PROJECT=$TOOLS_PRJ -p APP_IMAGESTREAM=dispatch-service -p APP_DC=dispatch-service | oc create -f - -n $TOOLS_PRJ
-----
-. Start the pipeline for the dispatch service:
-+
-----
-$ oc start-build dispatch-service-pipeline -n $TOOLS_PRJ
-----
-. Follow the progression of the build pipeline in the OpenShift console. Expect the pipeline to complete successfully. +
-If the pipeline build fails, check the pipeline build logs to see what went wrong, and if needed fix the issue.
-. Once the pipeline has executed, check that the dispatch service has deployed successfully.
-+
-image::images/openshift_service_deployed_2.png[]
-. In the OpenShift console, navigate to the dispatch service pod, and check the logs of the pod. Alternatively you can use `oc logs -f <name of the pod>`. +
-The last lines of the log look like:
-+
-----
-2018-08-27 07:25:25.749  INFO 1 --- [           main] o.s.c.support.DefaultLifecycleProcessor  : Starting beans in phase 0
-2018-08-27 07:25:25.847  INFO 1 --- [           main] o.s.c.support.DefaultLifecycleProcessor  : Starting beans in phase 2147483647
-2018-08-27 07:25:27.437  INFO 1 --- [ter.local:5671]] o.a.qpid.jms.sasl.SaslMechanismFinder    : Best match for SASL auth was: SASL-PLAIN
-2018-08-27 07:25:27.582  INFO 1 --- [           main] o.s.j.c.SingleConnectionFactory          : Established shared JMS Connection: org.apache.qpid.jms.JmsConnection@794cb26b
-2018-08-27 07:25:27.726  INFO 1 --- [ter.local:5671]] org.apache.qpid.jms.JmsConnection        : Connection ID:d8802bd8-94e7-4e58-b8a7-f53fe8e38dfa:1 connected to remote Broker: amqps://messaging.enmasse-bt.svc.cluster.local:5671?transport.trustAll=false&transport.verifyHost=true
-2018-08-27 07:25:27.853  INFO 1 --- [           main] s.b.c.e.t.TomcatEmbeddedServletContainer : Tomcat started on port(s): 8080 (http)
-2018-08-27 07:25:27.855  INFO 1 --- [           main] c.a.r.d.DispatchServiceApplication       : Started DispatchServiceApplication in 37.214 seconds (JVM running for 39.257)
-2018-08-27 07:25:37.066  INFO 1 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring FrameworkServlet 'dispatcherServlet'
-2018-08-27 07:25:37.066  INFO 1 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : FrameworkServlet 'dispatcherServlet': initialization started
-2018-08-27 07:25:37.145  INFO 1 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : FrameworkServlet 'dispatcherServlet': initialization completed in 79 ms
-2018-08-27 07:25:37.251  INFO 1 --- [ter.local:5671]] o.a.qpid.jms.sasl.SaslMechanismFinder    : Best match for SASL auth was: SASL-PLAIN
-2018-08-27 07:25:37.374  INFO 1 --- [nio-8080-exec-1] o.s.j.c.CachingConnectionFactory         : Established shared JMS Connection: org.apache.qpid.jms.JmsConnection@7de77b53
-2018-08-27 07:25:37.498  INFO 1 --- [ter.local:5671]] org.apache.qpid.jms.JmsConnection        : Connection ID:359839ad-9547-4a08-9354-03be0a297667:1 connected to remote Broker: amqps://messaging.enmasse-bt.svc.cluster.local:5671?transport.trustAll=false&transport.verifyHost=true
-----
-
-
-==== Application services Ansible installation
-
-If you have Ansible installed, you can run the Ansible playbooks provided in the lab material to provision the application services. The playbooks execute the same steps as the manual install. The only thing that remains to be done is to kick off the build pipelines.
-
-. Make sure you are logged with the `oc` client into your OpenShift environment.
-. In a terminal, change directory to the folder where you cloned the `installation` project of the lab material. Change directory to the `ansible` folder.
-. Run the service playbooks.
-+
-----
-$ cd ansible
-$ ansible-playbook playbooks/driver_service.yml -e project_enmasse=$ENMASSE_PRJ -e project_tools=$TOOLS_PRJ -e project_services=$SERVICES_PRJ
-$ ansible-playbook playbooks/passenger_service.yml -e project_enmasse=$ENMASSE_PRJ -e project_tools=$TOOLS_PRJ -e project_services=$SERVICES_PRJ
-$ ansible-playbook playbooks/dispatch_service.yml -e project_enmasse=$ENMASSE_PRJ -e project_tools=$TOOLS_PRJ -e project_services=$SERVICES_PRJ
-----
-. Expect the playbook to run to completion without failures.
-. Start the pipeline for the different services:
-+
-----
-$ oc start-build driver-service-pipeline -n $TOOLS_PRJ
-$ oc start-build passenger-service-pipeline -n $TOOLS_PRJ
-$ oc start-build dispatch-service-pipeline -n $TOOLS_PRJ
-----
 
 == Running the application
 
