@@ -1504,6 +1504,8 @@ In this lab we will add tracing to the message producers and consumers in the ap
 
 === Code Walkthrough
 
+NOTE: Needs reworking. Move to annex section "How does it work?"
+
 ==== Spring Boot - Dispatch service and Passenger service
 
 The OpenTracing _contrib_ project contains a large number of libraries providing integration of OpenTracing with a plethora of technologies and frameworks. +
@@ -1596,19 +1598,20 @@ vertx.eventBus().<JsonObject>send("message-producer", message, TracingUtils.inje
 
 === Jaeger on OpenShift
 
-The Jaeger ecosystem consists of three components:
+The Jaeger ecosystem consists of the following components:
 
 * jaeger-agent: a daemon program that runs on every host and receives tracing information submitted by applications via Jaeger client libraries.
 * jaeger-collector: aggregator process responsible for collecting tracing information from the jaeger agents and persisting the information in a storage backend.
 * jaeger-query: serves the API endpoints and the Jaeger UI.
+* jaeger-ui: React.js ui to visualize and lookup trace information.
+
+image::images/jaeger_architecture.png[]
 
 Jaeger collectors require a persistent storage backend. Cassandra and ElasticSearch are the primary supported storage backends.
 
-The Jaeger agent exposes a number of ports. The port to use depends on the protocol. By default, the Jaeger application client uses the _jaeger.thrift_ protocol and connects to the agent over UDP to port 6831.
+The initial versions of Jaeger used the _Jaeger Thrift_ format over a binary protocol to send span information between the agent and the collector. Recent versions use ProtocolBuffers and gRPC by default.
 
-The collector also exposes several ports. The Jaeger agent uses port 14267 over TCP to send spans in jaeger.thrift format.
-
-In the lab we use a simplified deployment for Jaeger. We use the _all-in-one_ Jaeger image, which bundles the collector and the query component. The collector uses memory storage. This means that storage is not persistent and will be lost when the Jaeger pod disappears or is scaled down.
+In the lab we use a simplified deployment for Jaeger. We use the _all-in-one_ Jaeger image, which bundles the collector, the query and the UI components. The collector uses memory storage. This means that storage is not persistent and will be lost when the Jaeger pod disappears or is scaled down.
 
 The Jaeger agent is deployed as a side-car container in the application pods. The default Jaeger protocol and ports are used.
 
@@ -1618,7 +1621,7 @@ Jaeger is installed in the tools project.
 
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
 . Review the template at `openshift/jaeger/jaeger-all-in-one.yaml`:
-* The three Jaeger components (Agent, Collector and Query Agent) run in one single pod.
+* The Jaeger components (Agent, Collector, Query Agent incl Jaeger UI) run in one single pod.
 * The template defines three services, one for each component
 * The template defines a route for the Jaeger UI
 . Deploy Jaeger to the tools project
@@ -1645,17 +1648,18 @@ $ git checkout tracing
 $ git push -u gogs tracing
 ----
 . Add Jaeger tracing configuration to the driver service configmap.
-* Change directory to the `etc` folder in the driver service source code project.
-* Open the `application-config.yaml` file. Note the additional configuration at the bottom of the file:
+* Open the driver service configmap for editing:
++
+----
+$ oc edit configmap driver-service -o yaml -n $SERVICES_PRJ
+----
+* The configmap descriptor opens in a _vi_ editor. Add the following to the `application-config.yml` entry of the configmap. This is a YAML file, so indentation is important!
 +
 ----
 service-name: driver-service
 reporter-log-spans: false
 sampler-type: ratelimiting
 sampler-param: 1
-# const
-# sampler-type: const
-# sampler-param: 1
 agent-host: localhost
 agent-port: 6831
 ----
@@ -1665,56 +1669,95 @@ agent-port: 6831
 *** const: samples all traces (sampler-param = 1) or none (sampler-param = 0)
 *** rate-limiting: traces are sampled with a constant rate. For example, when sampler-param=2.0 it will sample requests with the rate of 2 traces per second.
 *** probabilistic: the sampler makes a random sampling decision with the probability of sampling equal to the value of sampler-param property. For example, with sampler-param=0.1 approximately 1 in 10 traces will be sampled.
-***  remote: the sampler consults Jaeger agent for the appropriate sampling strategy to use in the current service.
 ** agent-host: the host name or IP address where the Jaeger agent runs.
 ** agent-port: the port the Jaeger agent is listening to.
-* Set the `amqp.host` property to the hostname of the EnMasse messaging service. Save the file.
-* Delete the current configmap and create a new one from the `application-config.yaml` file.
+* The configmap should look like:
 +
 ----
-$ oc delete configmap driver-service -n $SERVICES_PRJ
-$ oc create configmap driver-service --from-file=application-config.yaml -n $SERVICES_PRJ
+# Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+# reopened with the relevant failures.
+#
+apiVersion: v1
+data:
+  application-config.yaml: |-
+    kafka.bootstrap.servers: kafka-cluster-kafka-bootstrap.kafka-cluster-user1.svc:9092
+    kafka.groupid: driver-service
+
+    kafka.topic.driver-command: topic-driver-command
+    kafka.topic.driver-event: topic-driver-event
+    kafka.topic.ride-event: topic-ride-event
+
+    http.port: 8080
+
+    # delay before sending a `DriverAssignedEvent` message
+    driver.assigned.min.delay: 1
+    driver.assigned.max.delay: 3
+    # delay before sending a `RideStartedEvent` message
+    ride.started.min.delay: 5
+    ride.started.max.delay: 10
+    # delay before sending a `RideEndedEvent` message
+    ride.ended.min.delay: 5
+    ride.ended.max.delay: 10
+
+    service-name: driver-service
+    reporter-log-spans: false
+    sampler-type: ratelimiting
+    sampler-param: 1
+    agent-host: localhost
+    agent-port: 6831
+kind: ConfigMap
+metadata:
+  creationTimestamp: 2019-04-04T20:22:06Z
+  name: driver-service
+  namespace: ride-msa-services-user1
+  resourceVersion: "20391"
+  selfLink: /api/v1/namespaces/ride-msa-services-user1/configmaps/driver-service
+  uid: 50e9d0fc-5717-11e9-95c2-2cabcdef0010
 ----
+* Save the configmap.
+* If you are not familiar with _vi_, you can also edit the configmap in the OpenShift Console.
+** In a web browser, navigate to the OpenShift Console, log in if needed, and navigate to the services project. +
+In the side menu, select _Resources->Config Maps_. +
+Click on the _driver-service_ configmap. +
+In the upper-left corner of the screen, click the _Action_ button, and select _Edit_.
+A graphical editor opens:
++
+image::images/configmap_editor.png[]
+** Add the Jaeger configuration settings to the `application-config.yaml` entry.
+** Click _Save_.
+
 . Modify the build pipeline for the driver service to build from the tracing branch.
-* In the OpenShift console, navigate to the tools project, and then to the `Builds -> Pipelines` pane. Click on the `Edit Pipeline` link of the `driver-service-pipeline` pipeline. An editor for the Jenkins file opens.
+* In the OpenShift console, navigate to the tools project, and then to the _Builds -> Pipelines_ pane. Click on the _Edit Pipeline_ link of the `driver-service-pipeline` pipeline. An editor for the Jenkins file opens.
 * At line 15, change the branch to build from `master` to `tracing`.
 +
 image::images/openshift_build_pipeline_edit.png[]
-* Click `Save`.
+* Click _Save_.
 . Trigger a new run of the pipeline. The pipeline should complete without errors.
 . Replace the deploymentconfig of the driver service with a deploymentconfig that includes the Jaeger agent side-car container.
 * In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
 * Review the `openshift/driver-service/driver-service-tracing-template.yaml` template. +
-Notice the second (side-car) container definition, named `jaeger-agent` and using the `jaegertracing/jaeger-agent` image. The agent is set up to transmit tracing samples to the jaeger-collector service on port 14267.
-* Replace the deploymentconfig
+Notice the second (side-car) container definition, named `jaeger-agent` and using the `jaegertracing/jaeger-agent` image. The agent is set up to transmit tracing samples using gRPC to the jaeger-collector service on port 14250.
+* Replace the deploymentconfig:
 +
 ----
 $ oc delete dc driver-service -n $SERVICES_PRJ
-$ oc process -f openshift/driver-service/driver-service-tracing-template.yaml -p APPLICATION_NAME=driver-service -p APPLICATION_CONFIGMAP=driver-service -p APPLICATION_TRUSTSTORE=enmasse-truststore -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
+$ oc process -f openshift/driver-service/driver-service-tracing-template.yaml -p APPLICATION_NAME=driver-service -p APPLICATION_CONFIGMAP=driver-service -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
 ----
 . A new deployment of the driver service starts. Note that the pod consists of two containers.
 +
 image::images/openshift_pod_sidecar_container.png[]
-. Check the logs of the driver service container. Expect to see something like:
+. . Check the logs of the driver service container. Scroll through the logs until you find the log entry for the configuration of the Jaeger tracer:
 +
 ----
-Starting the Java application using /opt/run-java/run-java.sh ...
-exec java -Dapplication.configmap=driver-service -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory -Xms63m -Xmx250m -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+UseParallelOldGC -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -XX:MaxMetaspaceSize=100m -XX:ParallelGCThreads=1 -Djava.util.concurrent.ForkJoinPool.common.parallelism=1 -XX:CICompilerCount=2 -XX:+ExitOnOutOfMemoryError -cp . -jar /deployments/driver-service-1.0-SNAPSHOT.jar
-2018-08-28 08:25:08.965  INFO   --- [ntloop-thread-0] io.jaegertracing.Configuration           : Initialized tracer=Tracer(version=Java-0.27.0, serviceName=driver-service, reporter=CompositeReporter(reporters=[RemoteReporter(queueProcessor=RemoteReporter.QueueProcessor(open=true), sender=UdpSender(udpTransport=ThriftUdpTransport(socket=java.net.DatagramSocket@1a2d5144, receiveBuf=null, receiveOffSet=-1, receiveLength=0)), closeEnqueueTimeout=1000), LoggingReporter(logger=Logger[io.jaegertracing.reporters.LoggingReporter])]), sampler=RateLimitingSampler(maxTracesPerSecond=1.0, tags={sampler.type=ratelimiting, sampler.param=1.0}), ipv4=176160770, tags={hostname=driver-service-1-5p5ld, jaeger.version=Java-0.27.0, ip=10.128.0.2}, zipkinSharedRpcSpan=false, baggageSetter=io.jaegertracing.baggage.BaggageSetter@5b473695, expandExceptionLogs=false)
-2018-08-28 08:25:09.672  INFO   --- [ntloop-thread-3] MessageProducer                          : AMQP bridge to messaging.enmasse-bt.svc.cluster.local:5671 started
-2018-08-28 08:25:09.672  INFO   --- [ntloop-thread-2] MessageConsumer                          : AMQP bridge to messaging.enmasse-bt.svc.cluster.local:5671 started
-2018-08-28 08:25:09.680  INFO   --- [ntloop-thread-0] c.acme.ride.driver.service.MainVerticle  : Verticles deployed successfully.
-2018-08-28 08:25:09.680  INFO   --- [ntloop-thread-4] i.v.c.i.l.c.VertxIsolatedDeployer        : Succeeded in deploying verticle
+2019-04-06 14:36:02.624  INFO   --- [ntloop-thread-0] io.jaegertracing.Configuration           : Initialized tracer=Tracer(version=Java-0.27.0, serviceName=driver-service, reporter=RemoteReporter(queueProcessor=RemoteReporter.QueueProcessor(open=true), sender=UdpSender(udpTransport=ThriftUdpTransport(socket=java.net.DatagramSocket@2ce1a306, receiveBuf=null, receiveOffSet=-1, receiveLength=0)), closeEnqueueTimeout=1000), sampler=RateLimitingSampler(maxTracesPerSecond=1.0, tags={sampler.type=ratelimiting, sampler.param=1.0}), ipv4=176160937, tags={hostname=driver-service-1-rpxqr, jaeger.version=Java-0.27.0, ip=10.128.0.169}, zipkinSharedRpcSpan=false, baggageSetter=io.jaegertracing.baggage.BaggageSetter@3e41521d, expandExceptionLogs=false)
 ----
 . Check the logs of the jaeger-agent container. Expect to see something like:
 +
 ----
-{"level":"info","ts":1535444714.1444583,"caller":"tchannel/builder.go:94","msg":"Enabling service discovery","service":"jaeger-collector"}
-{"level":"info","ts":1535444714.1449552,"caller":"peerlistmgr/peer_list_mgr.go:111","msg":"Registering active peer","peer":"jaeger-collector.tools-bt.svc:14267"}
-{"level":"info","ts":1535444714.145469,"caller":"agent/main.go:62","msg":"Starting agent"}
-{"level":"info","ts":1535444715.1451674,"caller":"peerlistmgr/peer_list_mgr.go:157","msg":"Not enough connected peers","connected":0,"required":1}
-{"level":"info","ts":1535444715.1454852,"caller":"peerlistmgr/peer_list_mgr.go:166","msg":"Trying to connect to peer","host:port":"jaeger-collector.tools-bt.svc:14267"}
-{"level":"info","ts":1535444715.1478477,"caller":"peerlistmgr/peer_list_mgr.go:176","msg":"Connected to peer","host:port":"[::]:14267"}
+{"level":"info","ts":1554561361.9186995,"caller":"agent/main.go:87","msg":"Registering metrics handler with HTTP server","route":"/metrics"}
+{"level":"info","ts":1554561361.9190972,"caller":"agent/main.go:91","msg":"Starting agent"}
+{"level":"info","ts":1554561361.919445,"caller":"app/agent.go:68","msg":"Starting jaeger-agent HTTP server","http-port":5778}
 ----
 
 === Add tracing to the Passenger service
@@ -1729,30 +1772,68 @@ $ git checkout tracing
 $ git push -u gogs tracing
 ----
 . Add Jaeger tracing configuration to the passenger service configmap.
-* Change directory to the `etc` folder in the passenger service source code project.
-* Open the `application.properties` file. Note the additional configuration at the bottom of the file:
+* Open the passenger service configmap for editing:
++
+----
+$ oc edit configmap passenger-service -o yaml -n $SERVICES_PRJ
+----
+* The configmap descriptor opens in a _vi_ editor. Add the following to the `application.properties` entry of the configmap. This is a YAML file, so indentation is important!
 +
 ----
 jaeger.service-name=passenger-service
 jaeger.sampler-type=ratelimiting
 jaeger.sampler-param=1
-# const
-# jaeger.sampler-type=const
-# jaeger.sampler-param=1
 jaeger.reporter-log-spans=false
 jaeger.agent-host=localhost
 jaeger.agent-port=6831
 ----
 +
 Refer to the previous paragraph for details about these settings.
-+
-* Set the value of the `amqp.host` property to the hostname of the EnMasse messaging service. Save the file.
-* Delete the current configmap and create a new one from the `application.properties` file.
+* The configmap should look like:
 +
 ----
-$ oc delete configmap passenger-service -n $SERVICES_PRJ
-$ oc create configmap passenger-service --from-file=application.properties -n $SERVICES_PRJ
+# Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+# reopened with the relevant failures.
+#
+apiVersion: v1
+data:
+  application.properties: |-
+    kafka.bootstrap-address=kafka-cluster-kafka-bootstrap.kafka-cluster-user1.svc:9092
+    kafka.group-id=passenger-service
+    kafka.concurrency=5
+
+    sender.destination.ride-requested=topic-ride-event
+    sender.destination.passenger-canceled=topic-passenger-event
+
+    listener.destination.driver-assigned=topic-driver-event
+
+    scheduler.pool.size=5
+    scheduler.delay.min=1
+    scheduler.delay.max=3
+
+    logging.config=file:/app/logging/logback.xml
+    logging.level.com.acme.ride=DEBUG
+    logging.level.com.acme.ride.passenger.tracing=INFO
+
+    jaeger.service-name=passenger-service
+    jaeger.sampler-type=ratelimiting
+    jaeger.sampler-param=1
+    jaeger.reporter-log-spans=false
+    jaeger.agent-host=localhost
+    jaeger.agent-port=6831
+
+kind: ConfigMap
+metadata:
+  creationTimestamp: 2019-04-04T20:24:04Z
+  name: passenger-service
+  namespace: ride-msa-services-user1
+  resourceVersion: "20648"
+  selfLink: /api/v1/namespaces/ride-msa-services-user1/configmaps/passenger-service
+  uid: 974dfd5c-5717-11e9-95c2-2cabcdef0010
 ----
+* Save the configmap.
+* If you are not familiar with _vi_, you can also edit the configmap in the OpenShift Console.
 . Modify the build pipeline for the passenger service to build from the tracing branch.
 . Trigger a new run of the pipeline. The pipeline should complete without errors.
 . Replace the deploymentconfig of the passenger service with a deploymentconfig that includes the Jaeger agent side-car container.
@@ -1761,21 +1842,13 @@ $ oc create configmap passenger-service --from-file=application.properties -n $S
 +
 ----
 $ oc delete dc passenger-service -n $SERVICES_PRJ
-$ oc process -f openshift/passenger-service/passenger-service-tracing-template.yaml -p APPLICATION_NAME=passenger-service -p APPLICATION_CONFIGMAP=passenger-service -p APPLICATION_TRUSTSTORE=enmasse-truststore -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
+$ oc process -f openshift/passenger-service/passenger-service-tracing-template.yaml -p APPLICATION_NAME=passenger-service -p APPLICATION_CONFIGMAP=passenger-service -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
 ----
 . A new deployment of the passenger service starts. Note that the pod consists of two containers.
 . Check the logs of the passenger service container. Scroll through the logs until you find the log entry for the configuration of the Jaeger tracer:
 +
 ----
-2018-08-28 07:54:34.446  INFO 1 --- [           main] io.jaegertracing.Configuration           : I
-nitialized tracer=Tracer(version=Java-0.27.0, serviceName=passenger-service, reporter=CompositeRep
-orter(reporters=[RemoteReporter(queueProcessor=RemoteReporter.QueueProcessor(open=true), sender=Ud
-pSender(udpTransport=ThriftUdpTransport(socket=java.net.DatagramSocket@1807e3f6, receiveBuf=null,
-receiveOffSet=-1, receiveLength=0)), closeEnqueueTimeout=1000), LoggingReporter(logger=Logger[io.j
-aegertracing.reporters.LoggingReporter])]), sampler=RateLimitingSampler(maxTracesPerSecond=1.0, ta
-gs={sampler.type=ratelimiting, sampler.param=1.0}), ipv4=176161276, tags={hostname=passenger-servi
-ce-4-rm897, jaeger.version=Java-0.27.0, ip=10.128.1.252}, zipkinSharedRpcSpan=false, baggageSetter
-=io.jaegertracing.baggage.BaggageSetter@480d3575, expandExceptionLogs=false)
+2019-04-06 15:07:04.331  INFO 1 --- [           main] io.jaegertracing.Configuration           : Initialized tracer=Tracer(version=Java-0.27.0, serviceName=passenger-service, reporter=RemoteReporter(queueProcessor=RemoteReporter.QueueProcessor(open=true), sender=UdpSender(udpTransport=ThriftUdpTransport(socket=java.net.DatagramSocket@1e1a0406, receiveBuf=null, receiveOffSet=-1, receiveLength=0)), closeEnqueueTimeout=1000), sampler=RateLimitingSampler(maxTracesPerSecond=1.0, tags={sampler.type=ratelimiting, sampler.param=1.0}), ipv4=176160944, tags={hostname=passenger-service-2-hbqm4, jaeger.version=Java-0.27.0, ip=10.128.0.176}, zipkinSharedRpcSpan=false, baggageSetter=io.jaegertracing.baggage.BaggageSetter@3cebbb30, expandExceptionLogs=false)
 ----
 
 === Add tracing to the Dispatch service
@@ -1788,15 +1861,82 @@ $ git checkout tracing
 $ git push -u gogs tracing
 ----
 . Add Jaeger tracing configuration to the dispatch service configmap.
-* Change directory to the `etc` folder in the dispatch service source code project.
-* Open the `application.properties` file. Note the additional configuration at the bottom of the file:
-* Set the value of the `amqp.host` property to the hostname of the EnMasse messaging service to the `amqp.host` property. Set the `postgresql.host` property to the host name of the PostgreSQL service. Save the file.
-* Delete the current configmap and create a new one from the `application.properties` file.
+* Open the dispatch service configmap for editing:
 +
 ----
-$ oc delete configmap dispatch-service -n $SERVICES_PRJ
-$ oc create configmap dispatch-service --from-file=application.properties --from-file=jbpm-quartz.properties -n $SERVICES_PRJ
+$ oc edit configmap dispatch-service -o yaml -n $SERVICES_PRJ
 ----
+* The configmap descriptor opens in a _vi_ editor. Add the following to the `application.properties` entry of the configmap. This is a YAML file, so indentation is important!
++
+----
+jaeger.service-name=dispatch-service
+jaeger.sampler-type=ratelimiting
+jaeger.sampler-param=1
+jaeger.reporter-log-spans=False
+jaeger.agent-host=localhost
+jaeger.agent-port=6831
+----
++
+Refer to the previous paragraph for details about these settings.
+* The configmap should look like:
++
+----
+# Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+# reopened with the relevant failures.
+#
+apiVersion: v1
+data:
+  application.properties: |-
+    postgresql.host=dispatch-service-postgresql
+
+    spring.datasource.username=jboss
+    spring.datasource.password=jboss
+    spring.datasource.url=jdbc:postgresql://${postgresql.host}:5432/rhpam
+
+    jbpm.quartz.configuration=/app/config/jbpm-quartz.properties
+    quartz.datasource.username=${spring.datasource.username}
+    quartz.datasource.password=${spring.datasource.password}
+    quartz.datasource.url=${spring.datasource.url}
+    quartz.datasource.dbcp2.maxTotal=20
+
+    narayana.dbcp.maxTotal=20
+
+    kafka.bootstrap-address=kafka-cluster-kafka-bootstrap.kafka-cluster-user1.svc:9092
+    kafka.group-id=dispatch-service
+    kafka.concurrency=5
+
+    listener.destination.ride-event=topic-ride-event
+    listener.destination.driver-assigned-event=topic-driver-event
+    listener.destination.passenger-canceled-event=topic-passenger-event
+
+    send.destination.assign_driver_command=topic-driver-command
+    send.destination.handle_payment_command=topic-passenger-command
+
+    dispatch.assign.driver.expire.duration=5M
+
+    logging.config=file:/app/logging/logback.xml
+    logging.level.org.jbpm.executor.impl=WARN
+    logging.level.org.apache.kafka.clients=WARN
+    logging.level.org.hibernate.orm.deprecation=ERROR
+    logging.level.com.acme.ride=DEBUG
+    logging.level.com.acme.ride.dispatch.tracing=INFO
+
+    jaeger.service-name=dispatch-service
+    jaeger.sampler-type=ratelimiting
+    jaeger.sampler-param=1
+    jaeger.reporter-log-spans=False
+    jaeger.agent-host=localhost
+    jaeger.agent-port=6831
+
+  jbpm-quartz.properties: |
+    #============================================================================
+    # Configure Main Scheduler Properties
+    #============================================================================
+...
+----
+* Save the configmap.
+* If you are not familiar with _vi_, you can also edit the configmap in the OpenShift Console.
 . Modify the build pipeline for the dispatch service to build from the tracing branch.
 . Trigger a new run of the pipeline. The pipeline should complete without errors.
 . Replace the deploymentconfig of the dispatch service with a deploymentconfig that includes the Jaeger agent side-car container.
@@ -1805,18 +1945,18 @@ $ oc create configmap dispatch-service --from-file=application.properties --from
 +
 ----
 $ oc delete dc dispatch-service -n $SERVICES_PRJ
-$ oc process -f openshift/dispatch-service/dispatch-service-tracing-template.yaml -p APPLICATION_NAME=dispatch-service -p APPLICATION_CONFIGMAP=dispatch-service -p APPLICATION_TRUSTSTORE=enmasse-truststore -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
+$ oc process -f openshift/dispatch-service/dispatch-service-tracing-template.yaml -p APPLICATION_NAME=dispatch-service -p APPLICATION_CONFIGMAP=dispatch-service -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
 ----
 . A new deployment of the dispatch service starts. Note that the pod consists of two containers.
 . Check the logs of the dispatch service container. Scroll through the logs until you find the log entry for the configuration of the Jaeger tracer:
 +
 ----
-2018-08-28 09:19:41.350 INFO 1 --- [ main] io.jaegertracing.Configuration : Initialized tracer=Tracer(version=Java-0.27.0, serviceName=dispatch-service, reporter=CompositeReporter(reporters=[RemoteReporter(queueProcessor=RemoteReporter.QueueProcessor(open=true), sender=UdpSender(udpTransport=ThriftUdpTransport(socket=java.net.DatagramSocket@45e6d1e0, receiveBuf=null, receiveOffSet=-1, receiveLength=0)), closeEnqueueTimeout=1000), LoggingReporter(logger=Logger[io.jaegertracing.reporters.LoggingReporter])]), sampler=RateLimitingSampler(maxTracesPerSecond=1.0, tags={sampler.type=ratelimiting, sampler.param=1.0}), ipv4=176160774, tags={hostname=dispatch-service-1-jzr4s, jaeger.version=Java-0.27.0, ip=10.128.0.6}, zipkinSharedRpcSpan=false, baggageSetter=io.jaegertracing.baggage.BaggageSetter@61db86bf, expandExceptionLogs=false)
+2019-04-06 15:35:41.831  INFO 1 --- [           main] io.jaegertracing.Configuration           : Initialized tracer=Tracer(version=Java-0.27.0, serviceName=dispatch-service, reporter=RemoteReporter(queueProcessor=RemoteReporter.QueueProcessor(open=true), sender=UdpSender(udpTransport=ThriftUdpTransport(socket=java.net.DatagramSocket@5dbb50f3, receiveBuf=null, receiveOffSet=-1, receiveLength=0)), closeEnqueueTimeout=1000), sampler=RateLimitingSampler(maxTracesPerSecond=1.0, tags={sampler.type=ratelimiting, sampler.param=1.0}), ipv4=176160950, tags={hostname=dispatch-service-2-n8lvm, jaeger.version=Java-0.27.0, ip=10.128.0.182}, zipkinSharedRpcSpan=false, baggageSetter=io.jaegertracing.baggage.BaggageSetter@4a2e7bcb, expandExceptionLogs=false)
 ----
 
 === Tracing in action
 
-. In a terminal window, use curl to call the REST endpoint of the passenger service:
+. In a terminal window, use _curl_ to call the REST endpoint of the passenger service:
 +
 ----
 $ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 1}' $PASSENGER_SERVICE_URL/simulate
@@ -1825,31 +1965,30 @@ $ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 1
 Expect to see one trace, generated from the REST call:
 +
 image::images/jaeger_trace.png[]
-* the trace consists of 13 spans, divided over the three services of the application.
+* The trace consists of 19 spans, divided over the three services of the application.
 . Click on the span to see the different spans and their relationships:
 +
 image::images/jaeger_trace_details.png[]
 * The spans reflect the message flow throughout the system
-* For JMS message senders, the duration is very short (couple of milliseconds or less), which is expected as the span wraps just the sending of the message.
-* For JMS message consumers the span includes the code execution within the message listener implementation. For example, the first span in the dispatch service includes the creation, execution and persistence of the dispatch process.
+* For Kafka consumers and producers, the duration is very short (couple of milliseconds or less), which is expected as the span wraps just the consuming or sending of the message.
 . Click on a particular span to see the different tags and metadata attached to the span:
 +
 image::images/jaeger_trace_details_1.png[]
-* Note the msgTraceId which was specifically added as a tag to the span in the implementation.
-. In a terminal window, use curl to call the REST endpoint of the passenger service to send a request that will be cancelled by the passenger:
+* Note the `msgTraceId` which was specifically added as a tag to the span in the implementation of the passenger service.
+. In a terminal window, use _curl_ to call the REST endpoint of the passenger service to send a request that will be canceled by the passenger:
 +
 ----
 $ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 2}' $PASSENGER_SERVICE_URL/simulate
 ----
-. In the Jaeger UI, navigate to the landing page. Refresh the traces by clicking on the `Find Traces` button. Expect to see a second trace, with 10 spans. Click on the trace to see the details:
+. In the Jaeger UI, navigate to the landing page. Refresh the traces by clicking on the `Find Traces` button. Expect to see a second trace, with 15 spans. Click on the trace to see the details:
 +
 image::images/jaeger_trace_details_2.png[]
-. In a terminal window, use curl to call the REST endpoint of the passenger service to send a request that will remain unassigned:
+. In a terminal window, use _curl_ to call the REST endpoint of the passenger service to send a request that will remain unassigned:
 +
 ----
 $ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 3}' $PASSENGER_SERVICE_URL/simulate
 ----
-. In the Jaeger UI, navigate to the landing page. Refresh the traces. Expect to see three traces. The most recent trace has where the with 10 spans.
+. In the Jaeger UI, navigate to the landing page. Refresh the traces. The most recent trace has 7 spans.
 +
 image::images/jaeger_trace_3.png[]
 +
