@@ -1265,15 +1265,10 @@ Expect to see something like:
 +
 ----
 Starting the Java application using /opt/run-java/run-java.sh ...
-exec java -Xms128m -Xmx512m -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+UseParal
-lelOldGC -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90
--XX:MaxMetaspaceSize=200m -XX:ParallelGCThreads=1 -Djava.util.concurrent.ForkJoinPool.common.parallelism=1
--XX:CICompilerCount=2 -XX:+ExitOnOutOfMemoryError -cp . -jar /deployments/dispatch-service-1.0-SNAPSHOT.jar
-2019-04-03 16:39:59.011  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.
-springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springfr
-amework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration$$EnhancerBySpringCGLIB$$85aef5
-80] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-pro
-xying)
+exec java -Xms128m -Xmx512m -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+UseParallelOldGC -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -XX:MaxMetaspaceSize=200m -XX:ParallelGCThreads=1 -Djava.util.concur
+rent.ForkJoinPool.common.parallelism=1 -XX:CICompilerCount=2 -XX:+ExitOnOutOfMemoryError -cp . -jar /deployments/dispatch-service-1.0-SNAPSHOT.jar
+2019-04-05 11:06:22.613  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfi
+guration$$EnhancerBySpringCGLIB$$6d29b3a0] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -1283,46 +1278,29 @@ xying)
  =========|_|==============|___/=/_/_/_/
  :: Spring Boot ::        (v2.1.3.RELEASE)
 
-2019-04-03 16:40:00.217  INFO 1 --- [           main] b.c.PropertySourceBootstrapConfiguration : Located pr
-operty source: CompositePropertySource {name='composite-configmap', propertySources=[ConfigMapPropertySourc
-e {name='configmap.dispatch-service.ride-msa-services-user2'}]}
-2019-04-03 16:40:00.219  INFO 1 --- [           main] b.c.PropertySourceBootstrapConfiguration : Located pr
-operty source: SecretsPropertySource {name='secrets.dispatch-service.ride-msa-services-user2'}
-2019-04-03 16:40:00.811  INFO 1 --- [           main] c.a.r.d.DispatchServiceApplication       : The follow
-ing profiles are active: kubernetes
-2019-04-03 16:40:07.213  INFO 1 --- [           main] o.s.cloud.context.scope.GenericScope     : BeanFactor
-y id=661898ce-738a-3698-afcb-59c040e1435d
-2019-04-03 16:40:07.311  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.
-springframework.kafka.annotation.KafkaBootstrapConfiguration' of type [org.springframework.kafka.annotation
-.KafkaBootstrapConfiguration$$EnhancerBySpringCGLIB$$3d470406] is not eligible for getting processed by all
- BeanPostProcessors (for example: not eligible for auto-proxying)
-2019-04-03 16:40:07.715  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.
-springframework.transaction.annotation.ProxyTransactionManagementConfiguration' of type [org.springframewor
-k.transaction.annotation.ProxyTransactionManagementConfiguration$$EnhancerBySpringCGLIB$$6994f283] is not e
-ligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
-2019-04-03 16:40:07.813  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.
-springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springfr
-amework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration$$EnhancerBySpringCGLIB$$85aef5
-80] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-pro
-xying)
-2019-04-03 16:40:09.225  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat ini
-tialized with port(s): 8080 (http)
-2019-04-03 16:40:09.324  INFO 1 --- [           main] o.a.coyote.http11.Http11NioProtocol      : Initializi
-ng ProtocolHandler ["http-nio-8080"]
-2019-04-03 16:40:09.337  INFO 1 --- [           main] o.apache.catalina.core.StandardService   : Starting s
-ervice [Tomcat]
-2019-04-03 16:40:09.337  INFO 1 --- [           main] org.apache.catalina.core.StandardEngine  : Starting S
-ervlet engine: [Apache Tomcat/9.0.16]
+2019-04-05 11:06:24.031  INFO 1 --- [           main] b.c.PropertySourceBootstrapConfiguration : Located property source: CompositePropertySource {name='composite-configmap', propertySources=[ConfigMapPropertySource {name='configmap.dispatch-service.ride-msa-services-user1'}]}
+2019-04-05 11:06:24.033  INFO 1 --- [           main] b.c.PropertySourceBootstrapConfiguration : Located property source: SecretsPropertySource {name='secrets.dispatch-service.ride-msa-services-user1'}
+2019-04-05 11:06:24.761  INFO 1 --- [           main] c.a.r.d.DispatchServiceApplication       : The following profiles are active: kubernetes
+2019-04-05 11:06:32.030  INFO 1 --- [           main] o.s.cloud.context.scope.GenericScope     : BeanFactory id=661898ce-738a-3698-afcb-59c040e1435d
+2019-04-05 11:06:32.126  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.kafka.annotation.KafkaBootstrapConfiguration' of type [org.springframework.kafka.annotation.KafkaBootstrapConfiguration$$EnhancerBySpringCGLIB$$24c1c226] is no
+t eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2019-04-05 11:06:32.626  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.transaction.annotation.ProxyTransactionManagementConfiguration' of type [org.springframework.transaction.annotation.ProxyTransactionManagementConfiguration$$En
+hancerBySpringCGLIB$$510fb0a3] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2019-04-05 11:06:32.815  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfiguration' of type [org.springframework.cloud.autoconfigure.ConfigurationPropertiesRebinderAutoConfi
+guration$$EnhancerBySpringCGLIB$$6d29b3a0] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+2019-04-05 11:06:34.432  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 8080 (http)
+2019-04-05 11:06:34.533  INFO 1 --- [           main] o.a.coyote.http11.Http11NioProtocol      : Initializing ProtocolHandler ["http-nio-8080"]
+2019-04-05 11:06:34.714  INFO 1 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2019-04-05 11:06:34.714  INFO 1 --- [           main] org.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/9.0.16]
 
 ...
 
-2019-04-03 16:41:07.905  INFO 1 --- [           main] org.quartz.impl.StdSchedulerFactory      : Using default implementation for ThreadExecutor
-2019-04-03 16:41:07.930  INFO 1 --- [           main] org.quartz.core.SchedulerSignalerImpl    : Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
-2019-04-03 16:41:07.931  INFO 1 --- [           main] org.quartz.core.QuartzScheduler          : Quartz Scheduler v.2.3.0 created.
-2019-04-03 16:41:07.932  INFO 1 --- [           main] o.quartz.impl.jdbcjobstore.JobStoreCMT   : Using db table-based data access locking (synchronization).
-2019-04-03 16:41:07.936  INFO 1 --- [           main] o.quartz.impl.jdbcjobstore.JobStoreCMT   : JobStoreCMT initialized.
-2019-04-03 16:41:08.005  INFO 1 --- [           main] org.quartz.core.QuartzScheduler          : Scheduler
-meta-data: Quartz Scheduler (v2.3.0) 'SpringBootScheduler' with instanceId 'dispatch-service-1-5p9c61554309667909'
+2019-04-05 11:07:29.616  INFO 1 --- [           main] org.quartz.impl.StdSchedulerFactory      : Using default implementation for ThreadExecutor
+2019-04-05 11:07:29.649  INFO 1 --- [           main] org.quartz.core.SchedulerSignalerImpl    : Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
+2019-04-05 11:07:29.712  INFO 1 --- [           main] org.quartz.core.QuartzScheduler          : Quartz Scheduler v.2.3.0 created.
+2019-04-05 11:07:29.714  INFO 1 --- [           main] o.quartz.impl.jdbcjobstore.JobStoreCMT   : Using db table-based data access locking (synchronization).
+2019-04-05 11:07:29.719  INFO 1 --- [           main] o.quartz.impl.jdbcjobstore.JobStoreCMT   : JobStoreCMT initialized.
+2019-04-05 11:07:29.720  INFO 1 --- [           main] org.quartz.core.QuartzScheduler          : Scheduler meta-data: Quartz Scheduler (v2.3.0) 'SpringBootScheduler' with instanceId 'dispatch-service-2-qv2z61554462449621'
   Scheduler class: 'org.quartz.core.QuartzScheduler' - running locally.
   NOT STARTED.
   Currently in standby mode.
@@ -1330,15 +1308,17 @@ meta-data: Quartz Scheduler (v2.3.0) 'SpringBootScheduler' with instanceId 'disp
   Using thread pool 'org.quartz.simpl.SimpleThreadPool' - with 20 threads.
   Using job-store 'org.quartz.impl.jdbcjobstore.JobStoreCMT' - which supports persistence. and is clustered.
 
-2019-04-03 16:41:08.005  INFO 1 --- [           main] org.quartz.impl.StdSchedulerFactory      : Quartz scheduler 'SpringBootScheduler' initialized from specified file: '/app/config/jbpm-quartz.properties'
-2019-04-03 16:41:08.005  INFO 1 --- [           main] org.quartz.impl.StdSchedulerFactory      : Quartz scheduler version: 2.3.0
-2019-04-03 16:41:08.030  INFO 1 --- [           main] c.a.r.d.DispatchServiceApplication       : dispatch-process
-2019-04-03 16:41:09.828  INFO 1 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2019-04-03 16:41:09.828  INFO 1 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2019-04-03 16:41:09.839  INFO 1 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed
-initialization in 11 ms
-2019-04-03 16:41:10.410  INFO 1 --- [       Thread-6] org.quartz.core.QuartzScheduler          : Scheduler
-SpringBootScheduler_$_dispatch-service-1-5p9c61554309667909 started.
+2019-04-05 11:07:29.720  INFO 1 --- [           main] org.quartz.impl.StdSchedulerFactory      : Quartz scheduler 'SpringBootScheduler' initialized from specified file: '/app/config/jbpm-quartz.properties'
+2019-04-05 11:07:29.720  INFO 1 --- [           main] org.quartz.impl.StdSchedulerFactory      : Quartz scheduler version: 2.3.0
+2019-04-05 11:07:29.751  INFO 1 --- [           main] c.a.r.d.DispatchServiceApplication       : dispatch-process
+2019-04-05 11:07:30.416  INFO 1 --- [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version : 2.0.1
+2019-04-05 11:07:30.416  INFO 1 --- [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId : fa14705e51bd2ce5
+2019-04-05 11:07:31.230  INFO 1 --- [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version : 2.0.1
+2019-04-05 11:07:31.230  INFO 1 --- [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId : fa14705e51bd2ce5
+2019-04-05 11:07:31.235  INFO 1 --- [           main] o.s.s.c.ThreadPoolTaskScheduler          : Initializing ExecutorService
+
+...
+
 ----
 
 . Verify that the database schema has been created correctly.
@@ -1380,31 +1360,35 @@ Sent 1 message(s) with type 1
 . Check the log of the dispatch service in the OpenShift console or using `oc logs`. Expect to see the following, after a couple of seconds:
 +
 ----
-2018-08-27 10:40:08.863 DEBUG 1 --- [enerContainer-6] c.a.r.d.m.l.RideEventsMessageListener    : Processing 'RideRequestedEvent' message for ride 2ad3c3fe-9228-4060-a916-4c4b6655e004
-2018-08-27 10:40:09.522 DEBUG 1 --- [enerContainer-6] c.a.r.d.m.l.RideEventsMessageListener    : Started dispatch process for ride request 2ad3c3fe-9228-4060-a916-4c4b6655e004. ProcessInstanceId = 1
-2018-08-27 10:40:11.793 DEBUG 1 --- [enerContainer-9] d.m.l.DriverAssignedEventMessageListener : Processing 'DriverAssignedEvent' message for ride 2ad3c3fe-9228-4060-a916-4c4b6655e004
-2018-08-27 10:40:17.794 DEBUG 1 --- [enerContainer-1] c.a.r.d.m.l.RideEventsMessageListener    : Processing 'RideStartedEvent' message for ride 2ad3c3fe-9228-4060-a916-4c4b6655e004
-2018-08-27 10:40:25.677 DEBUG 1 --- [nerContainer-10] c.a.r.d.m.l.RideEventsMessageListener    : Processing 'RideEndedEvent' message for ride 2ad3c3fe-9228-4060-a916-4c4b6655e004
+2019-04-05 09:41:57.714 DEBUG 1 --- [ntainer#0-3-C-1] c.a.r.d.m.l.RideEventsMessageListener    : Processing 'RideRequestedEvent' message for ride 986f1b0a-062a-44b7-aafd-9018582161d8 from topic:partition topic-ride-event:3
+2019-04-05 09:41:59.632  INFO 1 --- [ntainer#0-3-C-1] o.a.kafka.common.utils.AppInfoParser     : Kafka version : 2.0.1
+2019-04-05 09:41:59.632  INFO 1 --- [ntainer#0-3-C-1] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId : fa14705e51bd2ce5
+2019-04-05 09:41:59.840 DEBUG 1 --- [ntainer#0-3-C-1] c.a.r.d.m.l.RideEventsMessageListener    : Started dispatch process for ride request 986f1b0a-062a-44b7-aafd-9018582161d8. ProcessInstanceId = 1
+2019-04-05 09:41:59.915 DEBUG 1 --- [ad | producer-1] c.a.r.d.w.MessageSenderWorkItemHandler   : Sent 'AssignDriverCommand' message for ride 986f1b0a-062a-44b7-aafd-9018582161d8
+2019-04-05 09:42:01.940 DEBUG 1 --- [ntainer#1-1-C-1] d.m.l.DriverAssignedEventMessageListener : Processing 'DriverAssignedEvent' message for ride 986f1b0a-062a-44b7-aafd-9018582161d8 from topic:partition topic-driver-event:3
+2019-04-05 09:42:10.919 DEBUG 1 --- [ntainer#0-3-C-1] c.a.r.d.m.l.RideEventsMessageListener    : Processing 'RideStartedEvent' message for ride 986f1b0a-062a-44b7-aafd-9018582161d8 from topic:partition topic-ride-event:3
+2019-04-05 09:42:16.923 DEBUG 1 --- [ntainer#0-3-C-1] c.a.r.d.m.l.RideEventsMessageListener    : Processing 'RideEndedEvent' message for ride 986f1b0a-062a-44b7-aafd-9018582161d8 from topic:partition topic-ride-event:3
+2019-04-05 09:42:17.016 DEBUG 1 --- [ad | producer-1] c.a.r.d.w.MessageSenderWorkItemHandler   : Sent 'HandlePaymentCommand' message for ride 986f1b0a-062a-44b7-aafd-9018582161d8
 ----
 . Check the log of the driver service:
 +
 ----
-2018-08-27 10:40:09.653 DEBUG   --- [ntloop-thread-2] MessageConsumer                          : Consumed 'AssignedDriverCommand' message for ride 2ad3c3fe-9228-4060-a916-4c4b6655e004
-2018-08-27 10:40:11.664 DEBUG   --- [ntloop-thread-3] MessageProducer                          : Sent 'DriverAssignedMessage' for ride 2ad3c3fe-9228-4060-a916-4c4b6655e004
-2018-08-27 10:40:17.669 DEBUG   --- [ntloop-thread-3] MessageProducer                          : Sent 'RideStartedMessage' for ride 2ad3c3fe-9228-4060-a916-4c4b6655e004
-2018-08-27 10:40:25.676 DEBUG   --- [ntloop-thread-3] MessageProducer                          : Sent 'RideEndedMessage' for ride 2ad3c3fe-9228-4060-a916-4c4b6655e004
+2019-04-05 09:41:59.863 DEBUG   --- [ntloop-thread-2] MessageConsumer                          : Consumed 'AssignDriverCommand' message. Ride: 986f1b0a-062a-44b7-aafd-9018582161d8 , topic: topic-driver-command ,  partition: 3
+2019-04-05 09:42:01.886 DEBUG   --- [ntloop-thread-3] MessageProducer                          : Sent 'DriverAssignedEvent' message for ride 986f1b0a-062a-44b7-aafd-9018582161d8
+2019-04-05 09:42:10.904 DEBUG   --- [ntloop-thread-3] MessageProducer                          : Sent 'RideStartedEvent' message for ride 986f1b0a-062a-44b7-aafd-9018582161d8
+2019-04-05 09:42:16.914 DEBUG   --- [ntloop-thread-3] MessageProducer                          : Sent 'RideEndedEvent' message for ride 986f1b0a-062a-44b7-aafd-9018582161d8
 ----
 . Check the log of the passenger service:
 +
 ----
-2018-08-27 10:40:08.788  INFO 1 --- [nio-8080-exec-7] c.a.r.p.m.RideRequestedMessageSender     : Sent 'RideRequestedEvent' for ride 2ad3c3fe-9228-4060-a916-4c4b6655e004
-2018-08-27 10:40:11.839 DEBUG 1 --- [enerContainer-1] r.p.m.DriverAssignedEventMessageListener : Consumed 'DriverAssignedEvent' for ride 2ad3c3fe-9228-4060-a916-4c4b6655e004
+2019-04-05 09:41:57.275 DEBUG 1 --- [ad | producer-1] c.a.r.p.m.RideRequestedMessageSender     : Sent 'RideRequestedEvent' message for ride 986f1b0a-062a-44b7-aafd-9018582161d8
+2019-04-05 09:42:02.131 DEBUG 1 --- [ntainer#0-1-C-1] r.p.m.DriverAssignedEventMessageListener : Consumed 'DriverAssignedEvent' message for ride 986f1b0a-062a-44b7-aafd-9018582161d8from partition 3
 ----
 . Check the state of the database:
 * In a browser window, navigate to the URL of the pgAdmin4 route, and log in if required. Expand the browser tree in the left pane until you see the `Ride` table in the rhpam database.
 * Right-click on the `Ride` table and select `Scripts -> SELECT script`.
 +
-image::images/pgadmin4_create_script.png[]
+image::images/pgadmin4_select_script.png[]
 * In the script window that opens, click on the `lightning` icon to execute the query. Expect to see one row with the `ride` entity created by the dispatch service.
 +
 image::images/pgadmin4_select_ride.png[]
@@ -1414,113 +1398,7 @@ image::images/pgadmin4_select_ride.png[]
 ** correlationkey: the value corresponds to the `rideId` of the `Ride` entity.
 ** status: 2, which corresponds to `COMPLETED`
 
-. In case the pgadmin4 application is not working as expected, you can do the following:
-* In a terminal window, set the current project to the services project:
-+
-----
-$ oc project $SERVICES_PRJ
-----
-* Locate the postgresql pod:
-+
-----
-$ POSTGRESQL_POD=$(oc get pods | grep dispatch-service-postgresql  | awk '{print $1}')
-----
-* `oc rsh` into the postgresql pod:
-+
-----
-$ oc rsh $POSTGRESQL_POD
-sh-4.2$
-----
-* Open the `psql` tool, and connect to the `rhpam` database and issue a query against the `ride` and `processinstancelog` tables:
-+
-----
-sh-4.2$ psql
-psql (9.6.10)
-Type "help" for help.
-
-postgres=# \c rhpam
-You are now connected to database "rhpam" as user "postgres".
-rhpam=# \x
-Expanded display is on.
-rhpam=# select * from ride;
--[ RECORD 1 ]----------------------------------------------------------------------
-id          | 36
-destination | North Carolina Biotechnology Center, Durham, NC 27703
-driverid    | driver198
-passengerid | passenger180
-pickup      | Durham Technical Community College, Durham, NC 27703
-price       | 36.19
-rideid      | ff753046-ddda-466f-b3ff-f6bdeed4ce7d
-status      | 6
-----
-+
-----
-rhpam=# select * from processinstancelog;
-
--[ RECORD 1 ]----------------------------------------------------------------------
-
-id                         | 1
-correlationkey             | e1dca58c-8694-44ae-8651-f90443e11098
-duration                   | 17493
-end_date                   | 2018-09-11 09:03:54.757
-externalid                 | spring-rm
-user_identity              |
-outcome                    |
-parentprocessinstanceid    | -1
-processid                  | acme-ride.dispatch-process
-processinstancedescription | dispatch-process
-processinstanceid          | 1
-processname                | dispatch-process
-processtype                | 1
-processversion             | 1.0
-sla_due_date               |
-slacompliance              | 0
-start_date                 | 2018-09-11 09:03:37.264
-status                     | 2
-----
-+
-Type /q to quit `psql`
-+
-----
-rhpam=# \q
-----
-. Check the EnMasse console.
-* In a browser window, navigate to the URL of the EnMasse console. The dashboard shows some activity:
-+
-image::images/enmasse_console_dashboard.png[]
-* Open the `Addresses` tab. Expect to see something like:
-+
-image::images/enmasse_console_messages.png[]
-** Three messages were sent and consumed from to the `topic-ride-event` topic (which corresponds to one `RideRequestedEvent` message, one `RideStartedEvent` message and one `RideEndedEvent` message).
-** Two messages were sent to and consumed from the `topic-driver-event` topic - this corresponds to the `DriverAssignedEvent` that was sent by the driver service and consumed by both the passenger service and the dispatch service.
-** One message was sent to and consumed from the `topic-driver-command` topic - this corresponds to the `AssignDriverCommand` event sent by the dispatch service and consumed by the driver service.
-** There is no consumer for the `topic-passenger-command` topic, so the `HandlePaymentCommand` sent in the last stepp of the dispatch service process does not show up in the console.
-* Click on an address, to see some details about subscribers to that address.
-** The `topic-driver-command` topic has one non-durable subscriber:
-+
-image::images/enmasse_console_addresses_2.png[]
-+
-This matches the non-shared, non-durable consumer from the driver-service
-+
-** The `topic-driver-event` topic, has two durable subscribers:
-+
-image::images/enmasse_console_addresses_3.png[]
-* The `Connections` tab shows the active browser connections:
-+
-image::images/enmasse_console_connections.png[]
-* Expand a connection to see some details. For example, the connection that shows 3 messages in and two senders:
-+
-image::images/enmasse_console_connections_2.png[]
-+
-This connection represents the `ProducerVerticle` in the driver service.
-+
-* The connection that shows 1 message in, has 1 sender and 10 receivers:
-+
-image::images/enmasse_console_connections_3.png[]
-+
-This connection is from the passenger service. It shows 10 receivers because we use a pool of 10 message listeners.
-+
-* The other connections are from the `ConsumerVerticle` in the driver service and from the message listeners and producer in the dispatch service (3 times 20 listeners).
+. AMQ Streams does not have a graphical console in the current version. This is something that is being actively worked on. On the other hand, it is is possible to extract metrics from the Kafka cluster. We will explore this later in the lab.
 
 . Send a command to the REST API of the passenger service to send a `RideRequestedEvent` message of type 2.
 +
@@ -1530,41 +1408,41 @@ $ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 2
 +
 A type 2 message mimicks the scenario where the passenger cancels the ride: ride requested -> driver assigned -> passenger cancelled.
 +
-* Check the logs of the different service pods, the database and the EnMasse console.
+* Check the logs of the different service pods and the database.
 ** The `Ride` for this ride has status 4 (`PASSENGER_CANCELED`)
 ** The passenger service log shows that the passenger is canceling the ride:
 +
 ----
-2018-08-27 16:42:24.831  INFO 1 --- [nio-8080-exec-5] c.a.r.p.m.RideRequestedMessageSender     : Sent 'RideRequestedEvent' for ride 7f016ed9-ba81-425f-a989-b35afdf9dace
-2018-08-27 16:42:27.175 DEBUG 1 --- [enerContainer-8] r.p.m.DriverAssignedEventMessageListener : Consumed 'DriverAssignedEvent' for ride 7f016ed9-ba81-425f-a989-b35afdf9dace
-2018-08-27 16:42:27.175  INFO 1 --- [enerContainer-8] r.p.m.DriverAssignedEventMessageListener : Passenger is canceling ride 7f016ed9-ba81-425f-a989-b35afdf9dace
+2019-04-05 10:05:49.772 DEBUG 1 --- [ad | producer-1] c.a.r.p.m.RideRequestedMessageSender     : Sent 'RideRequestedEvent' message for ride 45c27e4e-ba80-4886-beba-28370edb866e
+2019-04-05 10:05:50.845 DEBUG 1 --- [ntainer#0-0-C-1] r.p.m.DriverAssignedEventMessageListener : Consumed 'DriverAssignedEvent' message for ride 45c27e4e-ba80-4886-beba-28370edb866efrom partition 0
+2019-04-05 10:05:50.846 DEBUG 1 --- [ntainer#0-0-C-1] r.p.m.DriverAssignedEventMessageListener : Passenger is canceling ride 45c27e4e-ba80-4886-beba-28370edb866e
+2019-04-05 10:05:51.848 DEBUG 1 --- [pool-1-thread-1] r.p.m.DriverAssignedEventMessageListener : About to send 'PassengerCanceled' message for ride 45c27e4e-ba80-4886-beba-28370edb866e
+2019-04-05 10:05:51.860 DEBUG 1 --- [ad | producer-1] c.a.r.p.m.PassengerCanceledMessageSender : Sent 'PassengerCanceledEvent' message for ride 45c27e4e-ba80-4886-beba-28370edb866e
 ----
-** The dispatcher server logs shows that the service consumed a `PassengerCancelledEvent` message.
+** The dispatcher server logs shows that the service consumed a `PassengerCanceledEvent` message.
 +
 ----
-2018-08-27 16:42:24.832 DEBUG 1 --- [enerContainer-7] c.a.r.d.m.l.RideEventsMessageListener    : Processing 'RideRequestedEvent' message for ride 7f016ed9-ba81-425f-a989-b35afdf9dace
-2018-08-27 16:42:24.859 DEBUG 1 --- [enerContainer-7] c.a.r.d.m.l.RideEventsMessageListener    : Started dispatch process for ride request 7f016ed9-ba81-425f-a989-b35afdf9dace. ProcessInstanceId = 2
-2018-08-27 16:42:27.175 DEBUG 1 --- [enerContainer-1] d.m.l.DriverAssignedEventMessageListener : Processing 'DriverAssignedEvent' message for ride 7f016ed9-ba81-425f-a989-b35afdf9dace
-2018-08-27 16:42:28.315 DEBUG 1 --- [enerContainer-3] .l.PassengerCanceledEventMessageListener : Processing 'PassengerCancelled' message for ride 7f016ed9-ba81-425f-a989-b35afdf9dace
-Passenger cancelled
+2019-04-05 10:05:49.785 DEBUG 1 --- [ntainer#0-2-C-1] c.a.r.d.m.l.RideEventsMessageListener    : Processing 'RideRequestedEvent' message for ride 45c27e4e-ba80-4886-beba-28370edb866e from topic:partition topic-ride-event:0
+2019-04-05 10:05:49.818 DEBUG 1 --- [ad | producer-1] c.a.r.d.w.MessageSenderWorkItemHandler   : Sent 'AssignDriverCommand' message for ride 45c27e4e-ba80-4886-beba-28370edb866e
+2019-04-05 10:05:49.819 DEBUG 1 --- [ntainer#0-2-C-1] c.a.r.d.m.l.RideEventsMessageListener    : Started dispatch process for ride request 45c27e4e-ba80-4886-beba-28370edb866e. ProcessInstanceId = 2
+2019-04-05 10:05:50.846 DEBUG 1 --- [ntainer#1-0-C-1] d.m.l.DriverAssignedEventMessageListener : Processing 'DriverAssignedEvent' message for ride 45c27e4e-ba80-4886-beba-28370edb866e from topic:partition topic-driver-event:0
+2019-04-05 10:05:51.872 DEBUG 1 --- [ntainer#2-0-C-1] .l.PassengerCanceledEventMessageListener : Processing 'PassengerCanceled' message for ride 45c27e4e-ba80-4886-beba-28370edb866e from topic:partition topic-passenger-event:0
 ----
-* The EnMasse console shows a total of 11 messages (6 from the first test, 5 from this test).
 
 . Finally, send a command to the REST API of the passenger service to send a `RideRequestedEvent` message of type 3.
 +
 ----
-$ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 2}' $PASSENGER_SERVICE_URL/simulate
+$ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 3}' $PASSENGER_SERVICE_URL/simulate
 ----
 +
 A type 3 message mimicks the scenario where no driver can be assigned to the ride: ride requested -> request expires. It will actually take 5 minutes before the ride expires.
 +
-* Check the logs of the different service pods, the database and the EnMasse console.
+* Check the logs of the different service pods and the database.
 ** The `Ride` for this ride has status 1 (`RIDE_REQUESTED`)
-** The `ProcessInstanceLog` table shows thath the process instance has status 1 (`ACTIVE`)
+** The `ProcessInstanceLog` table shows that the process instance has status 1 (`ACTIVE`)
 ** There is a row in the `ProcessInstanceInfo` for the active process instance.
 ** After 5 minutes, the status of the `Ride` entity moves to 7 (`EXPIRED`), and the process instance completes (status moves to 2 - `COMPLETED`)
 
-* The EnMasse console shows a total of 13 messages (6 from the first test, 5 from the previous test and 2 for this test).
 
 . Now you can put some load on the system. This can be done by sending a command to the REST API of the passenger service to send multiple `RideRequestedEvent` messages. If you chose type 0, you will have a mix of the different types, with approximately 6% messages of type 2 and 6% of type 3.
 +
@@ -1576,48 +1454,8 @@ As an example, this would be a typical distribution of the state of the `Ride` e
 +
 image::images/pgadmin4_count_ride_status_2.png[]
 
-. In case the pgadmin4 application is not working as expected, you can do the following:
-* In a terminal window, set the current project to the services project:
-+
-----
-$ oc project $SERVICES_PRJ
-----
-* Locate the postgresql pod:
-+
-----
-$ POSTGRESQL_POD=$(oc get pods | grep dispatch-service-postgresql  | awk '{print $1}')
-----
-* `oc rsh` into the postgresql pod:
-+
-----
-$ oc rsh $POSTGRESQL_POD
-sh-4.2$
-----
-* Open the `psql` tool, and connect to the `rhpam` database and query the `Ride` table:
-+
-----
-sh-4.2$ psql
-psql (9.6.10)
-Type "help" for help.
-
-postgres=# \c rhpam
-You are now connected to database "rhpam" as user "postgres".
-rhpam=# SELECT status, count(1) from ride group by status;
- status | count
---------+-------
-      6 |    90
-      4 |     7
-      7 |     6
-(4 rows)
-----
-+
-Type /q to quit `psql`
-+
-----
-rhpam=# \q
-----
-
-. The dispatch service and the passenger service use shared, durable topic subscriptions. This means they can be scaled up and down without issues.
+. The way Kafka works ensures that a consumer, after a crash, will resume where it left off before disappearing - actually it will resume from the last committed offset. +
+This means that on a container platform, consumers can be scaled down without issues.
 * Scale down the dispatch server to 0 pods
 +
 ----
@@ -1634,18 +1472,19 @@ $ curl -X POST -H "Content-type: application/json" -d '{"messages": 10, "type": 
 $ oc scale dc dispatch-service --replicas=1 -n $SERVICES_PRJ
 ----
 * Follow the logs of the dispatch service. Note that after starting up the dispatch service starts to consume the messages sent to the `topic-ride-event` topic while the service was down.
+. A Kafka topic is created with a number of partitions (in the lab, the topics are configured with 15 partitions). When there are multiple consumers belonging to the same consumer group, each consumer will get assigned a number of partitions, effectively spreading the load over the different consumers.
 * Scale up the dispatch service to 2 pods
 +
 ----
 $ oc scale dc dispatch-service --replicas=2 -n $SERVICES_PRJ
 ----
-* Call the passenger service REST API:
+* Wait until the second pod is up and running
+* Call the passenger service REST API, an send a bunch of messages:
 +
 ----
-$ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 1}' $PASSENGER_SERVICE_URL/simulate
+$ curl -X POST -H "Content-type: application/json" -d '{"messages": 10, "type": 1}' $PASSENGER_SERVICE_URL/simulate
 ----
-* Check the logs of the dispatch server, notice that the `RideRequestedEvent` message and following messages is being consumed on only 1 node.
-* Send a bunch of messages. Check the logs and notice that message handling is distributed over the dispatch service pods.
+* Check the logs of both dispatch service pods and notice that message handling is distributed over the two pods
 
 == Tracing
 
@@ -1664,6 +1503,8 @@ Enabling tracing requires instrumentation of the application code. However, more
 In this lab we will add tracing to the message producers and consumers in the application services. This will give us an overall view of the message flow throughout the system.
 
 === Code Walkthrough
+
+NOTE: Needs reworking. Move to annex section "How does it work?"
 
 ==== Spring Boot - Dispatch service and Passenger service
 
@@ -1757,19 +1598,20 @@ vertx.eventBus().<JsonObject>send("message-producer", message, TracingUtils.inje
 
 === Jaeger on OpenShift
 
-The Jaeger ecosystem consists of three components:
+The Jaeger ecosystem consists of the following components:
 
 * jaeger-agent: a daemon program that runs on every host and receives tracing information submitted by applications via Jaeger client libraries.
 * jaeger-collector: aggregator process responsible for collecting tracing information from the jaeger agents and persisting the information in a storage backend.
 * jaeger-query: serves the API endpoints and the Jaeger UI.
+* jaeger-ui: React.js ui to visualize and lookup trace information.
+
+image::images/jaeger_architecture.png[]
 
 Jaeger collectors require a persistent storage backend. Cassandra and ElasticSearch are the primary supported storage backends.
 
-The Jaeger agent exposes a number of ports. The port to use depends on the protocol. By default, the Jaeger application client uses the _jaeger.thrift_ protocol and connects to the agent over UDP to port 6831.
+The initial versions of Jaeger used the _Jaeger Thrift_ format over a binary protocol to send span information between the agent and the collector. Recent versions use ProtocolBuffers and gRPC by default.
 
-The collector also exposes several ports. The Jaeger agent uses port 14267 over TCP to send spans in jaeger.thrift format.
-
-In the lab we use a simplified deployment for Jaeger. We use the _all-in-one_ Jaeger image, which bundles the collector and the query component. The collector uses memory storage. This means that storage is not persistent and will be lost when the Jaeger pod disappears or is scaled down.
+In the lab we use a simplified deployment for Jaeger. We use the _all-in-one_ Jaeger image, which bundles the collector, the query and the UI components. The collector uses memory storage. This means that storage is not persistent and will be lost when the Jaeger pod disappears or is scaled down.
 
 The Jaeger agent is deployed as a side-car container in the application pods. The default Jaeger protocol and ports are used.
 
@@ -1779,7 +1621,7 @@ Jaeger is installed in the tools project.
 
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
 . Review the template at `openshift/jaeger/jaeger-all-in-one.yaml`:
-* The three Jaeger components (Agent, Collector and Query Agent) run in one single pod.
+* The Jaeger components (Agent, Collector, Query Agent incl Jaeger UI) run in one single pod.
 * The template defines three services, one for each component
 * The template defines a route for the Jaeger UI
 . Deploy Jaeger to the tools project
@@ -1806,17 +1648,18 @@ $ git checkout tracing
 $ git push -u gogs tracing
 ----
 . Add Jaeger tracing configuration to the driver service configmap.
-* Change directory to the `etc` folder in the driver service source code project.
-* Open the `application-config.yaml` file. Note the additional configuration at the bottom of the file:
+* Open the driver service configmap for editing:
++
+----
+$ oc edit configmap driver-service -o yaml -n $SERVICES_PRJ
+----
+* The configmap descriptor opens in a _vi_ editor. Add the following to the `application-config.yml` entry of the configmap. This is a YAML file, so indentation is important!
 +
 ----
 service-name: driver-service
 reporter-log-spans: false
 sampler-type: ratelimiting
 sampler-param: 1
-# const
-# sampler-type: const
-# sampler-param: 1
 agent-host: localhost
 agent-port: 6831
 ----
@@ -1826,56 +1669,95 @@ agent-port: 6831
 *** const: samples all traces (sampler-param = 1) or none (sampler-param = 0)
 *** rate-limiting: traces are sampled with a constant rate. For example, when sampler-param=2.0 it will sample requests with the rate of 2 traces per second.
 *** probabilistic: the sampler makes a random sampling decision with the probability of sampling equal to the value of sampler-param property. For example, with sampler-param=0.1 approximately 1 in 10 traces will be sampled.
-***  remote: the sampler consults Jaeger agent for the appropriate sampling strategy to use in the current service.
 ** agent-host: the host name or IP address where the Jaeger agent runs.
 ** agent-port: the port the Jaeger agent is listening to.
-* Set the `amqp.host` property to the hostname of the EnMasse messaging service. Save the file.
-* Delete the current configmap and create a new one from the `application-config.yaml` file.
+* The configmap should look like:
 +
 ----
-$ oc delete configmap driver-service -n $SERVICES_PRJ
-$ oc create configmap driver-service --from-file=application-config.yaml -n $SERVICES_PRJ
+# Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+# reopened with the relevant failures.
+#
+apiVersion: v1
+data:
+  application-config.yaml: |-
+    kafka.bootstrap.servers: kafka-cluster-kafka-bootstrap.kafka-cluster-user1.svc:9092
+    kafka.groupid: driver-service
+
+    kafka.topic.driver-command: topic-driver-command
+    kafka.topic.driver-event: topic-driver-event
+    kafka.topic.ride-event: topic-ride-event
+
+    http.port: 8080
+
+    # delay before sending a `DriverAssignedEvent` message
+    driver.assigned.min.delay: 1
+    driver.assigned.max.delay: 3
+    # delay before sending a `RideStartedEvent` message
+    ride.started.min.delay: 5
+    ride.started.max.delay: 10
+    # delay before sending a `RideEndedEvent` message
+    ride.ended.min.delay: 5
+    ride.ended.max.delay: 10
+
+    service-name: driver-service
+    reporter-log-spans: false
+    sampler-type: ratelimiting
+    sampler-param: 1
+    agent-host: localhost
+    agent-port: 6831
+kind: ConfigMap
+metadata:
+  creationTimestamp: 2019-04-04T20:22:06Z
+  name: driver-service
+  namespace: ride-msa-services-user1
+  resourceVersion: "20391"
+  selfLink: /api/v1/namespaces/ride-msa-services-user1/configmaps/driver-service
+  uid: 50e9d0fc-5717-11e9-95c2-2cabcdef0010
 ----
+* Save the configmap.
+* If you are not familiar with _vi_, you can also edit the configmap in the OpenShift Console.
+** In a web browser, navigate to the OpenShift Console, log in if needed, and navigate to the services project. +
+In the side menu, select _Resources->Config Maps_. +
+Click on the _driver-service_ configmap. +
+In the upper-left corner of the screen, click the _Action_ button, and select _Edit_.
+A graphical editor opens:
++
+image::images/configmap_editor.png[]
+** Add the Jaeger configuration settings to the `application-config.yaml` entry.
+** Click _Save_.
+
 . Modify the build pipeline for the driver service to build from the tracing branch.
-* In the OpenShift console, navigate to the tools project, and then to the `Builds -> Pipelines` pane. Click on the `Edit Pipeline` link of the `driver-service-pipeline` pipeline. An editor for the Jenkins file opens.
+* In the OpenShift console, navigate to the tools project, and then to the _Builds -> Pipelines_ pane. Click on the _Edit Pipeline_ link of the `driver-service-pipeline` pipeline. An editor for the Jenkins file opens.
 * At line 15, change the branch to build from `master` to `tracing`.
 +
 image::images/openshift_build_pipeline_edit.png[]
-* Click `Save`.
+* Click _Save_.
 . Trigger a new run of the pipeline. The pipeline should complete without errors.
 . Replace the deploymentconfig of the driver service with a deploymentconfig that includes the Jaeger agent side-car container.
 * In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
 * Review the `openshift/driver-service/driver-service-tracing-template.yaml` template. +
-Notice the second (side-car) container definition, named `jaeger-agent` and using the `jaegertracing/jaeger-agent` image. The agent is set up to transmit tracing samples to the jaeger-collector service on port 14267.
-* Replace the deploymentconfig
+Notice the second (side-car) container definition, named `jaeger-agent` and using the `jaegertracing/jaeger-agent` image. The agent is set up to transmit tracing samples using gRPC to the jaeger-collector service on port 14250.
+* Replace the deploymentconfig:
 +
 ----
 $ oc delete dc driver-service -n $SERVICES_PRJ
-$ oc process -f openshift/driver-service/driver-service-tracing-template.yaml -p APPLICATION_NAME=driver-service -p APPLICATION_CONFIGMAP=driver-service -p APPLICATION_TRUSTSTORE=enmasse-truststore -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
+$ oc process -f openshift/driver-service/driver-service-tracing-template.yaml -p APPLICATION_NAME=driver-service -p APPLICATION_CONFIGMAP=driver-service -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
 ----
 . A new deployment of the driver service starts. Note that the pod consists of two containers.
 +
 image::images/openshift_pod_sidecar_container.png[]
-. Check the logs of the driver service container. Expect to see something like:
+. . Check the logs of the driver service container. Scroll through the logs until you find the log entry for the configuration of the Jaeger tracer:
 +
 ----
-Starting the Java application using /opt/run-java/run-java.sh ...
-exec java -Dapplication.configmap=driver-service -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory -Xms63m -Xmx250m -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:+UseParallelOldGC -XX:MinHeapFreeRatio=10 -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -XX:MaxMetaspaceSize=100m -XX:ParallelGCThreads=1 -Djava.util.concurrent.ForkJoinPool.common.parallelism=1 -XX:CICompilerCount=2 -XX:+ExitOnOutOfMemoryError -cp . -jar /deployments/driver-service-1.0-SNAPSHOT.jar
-2018-08-28 08:25:08.965  INFO   --- [ntloop-thread-0] io.jaegertracing.Configuration           : Initialized tracer=Tracer(version=Java-0.27.0, serviceName=driver-service, reporter=CompositeReporter(reporters=[RemoteReporter(queueProcessor=RemoteReporter.QueueProcessor(open=true), sender=UdpSender(udpTransport=ThriftUdpTransport(socket=java.net.DatagramSocket@1a2d5144, receiveBuf=null, receiveOffSet=-1, receiveLength=0)), closeEnqueueTimeout=1000), LoggingReporter(logger=Logger[io.jaegertracing.reporters.LoggingReporter])]), sampler=RateLimitingSampler(maxTracesPerSecond=1.0, tags={sampler.type=ratelimiting, sampler.param=1.0}), ipv4=176160770, tags={hostname=driver-service-1-5p5ld, jaeger.version=Java-0.27.0, ip=10.128.0.2}, zipkinSharedRpcSpan=false, baggageSetter=io.jaegertracing.baggage.BaggageSetter@5b473695, expandExceptionLogs=false)
-2018-08-28 08:25:09.672  INFO   --- [ntloop-thread-3] MessageProducer                          : AMQP bridge to messaging.enmasse-bt.svc.cluster.local:5671 started
-2018-08-28 08:25:09.672  INFO   --- [ntloop-thread-2] MessageConsumer                          : AMQP bridge to messaging.enmasse-bt.svc.cluster.local:5671 started
-2018-08-28 08:25:09.680  INFO   --- [ntloop-thread-0] c.acme.ride.driver.service.MainVerticle  : Verticles deployed successfully.
-2018-08-28 08:25:09.680  INFO   --- [ntloop-thread-4] i.v.c.i.l.c.VertxIsolatedDeployer        : Succeeded in deploying verticle
+2019-04-06 14:36:02.624  INFO   --- [ntloop-thread-0] io.jaegertracing.Configuration           : Initialized tracer=Tracer(version=Java-0.27.0, serviceName=driver-service, reporter=RemoteReporter(queueProcessor=RemoteReporter.QueueProcessor(open=true), sender=UdpSender(udpTransport=ThriftUdpTransport(socket=java.net.DatagramSocket@2ce1a306, receiveBuf=null, receiveOffSet=-1, receiveLength=0)), closeEnqueueTimeout=1000), sampler=RateLimitingSampler(maxTracesPerSecond=1.0, tags={sampler.type=ratelimiting, sampler.param=1.0}), ipv4=176160937, tags={hostname=driver-service-1-rpxqr, jaeger.version=Java-0.27.0, ip=10.128.0.169}, zipkinSharedRpcSpan=false, baggageSetter=io.jaegertracing.baggage.BaggageSetter@3e41521d, expandExceptionLogs=false)
 ----
 . Check the logs of the jaeger-agent container. Expect to see something like:
 +
 ----
-{"level":"info","ts":1535444714.1444583,"caller":"tchannel/builder.go:94","msg":"Enabling service discovery","service":"jaeger-collector"}
-{"level":"info","ts":1535444714.1449552,"caller":"peerlistmgr/peer_list_mgr.go:111","msg":"Registering active peer","peer":"jaeger-collector.tools-bt.svc:14267"}
-{"level":"info","ts":1535444714.145469,"caller":"agent/main.go:62","msg":"Starting agent"}
-{"level":"info","ts":1535444715.1451674,"caller":"peerlistmgr/peer_list_mgr.go:157","msg":"Not enough connected peers","connected":0,"required":1}
-{"level":"info","ts":1535444715.1454852,"caller":"peerlistmgr/peer_list_mgr.go:166","msg":"Trying to connect to peer","host:port":"jaeger-collector.tools-bt.svc:14267"}
-{"level":"info","ts":1535444715.1478477,"caller":"peerlistmgr/peer_list_mgr.go:176","msg":"Connected to peer","host:port":"[::]:14267"}
+{"level":"info","ts":1554561361.9186995,"caller":"agent/main.go:87","msg":"Registering metrics handler with HTTP server","route":"/metrics"}
+{"level":"info","ts":1554561361.9190972,"caller":"agent/main.go:91","msg":"Starting agent"}
+{"level":"info","ts":1554561361.919445,"caller":"app/agent.go:68","msg":"Starting jaeger-agent HTTP server","http-port":5778}
 ----
 
 === Add tracing to the Passenger service
@@ -1890,30 +1772,68 @@ $ git checkout tracing
 $ git push -u gogs tracing
 ----
 . Add Jaeger tracing configuration to the passenger service configmap.
-* Change directory to the `etc` folder in the passenger service source code project.
-* Open the `application.properties` file. Note the additional configuration at the bottom of the file:
+* Open the passenger service configmap for editing:
++
+----
+$ oc edit configmap passenger-service -o yaml -n $SERVICES_PRJ
+----
+* The configmap descriptor opens in a _vi_ editor. Add the following to the `application.properties` entry of the configmap. This is a YAML file, so indentation is important!
 +
 ----
 jaeger.service-name=passenger-service
 jaeger.sampler-type=ratelimiting
 jaeger.sampler-param=1
-# const
-# jaeger.sampler-type=const
-# jaeger.sampler-param=1
 jaeger.reporter-log-spans=false
 jaeger.agent-host=localhost
 jaeger.agent-port=6831
 ----
 +
 Refer to the previous paragraph for details about these settings.
-+
-* Set the value of the `amqp.host` property to the hostname of the EnMasse messaging service. Save the file.
-* Delete the current configmap and create a new one from the `application.properties` file.
+* The configmap should look like:
 +
 ----
-$ oc delete configmap passenger-service -n $SERVICES_PRJ
-$ oc create configmap passenger-service --from-file=application.properties -n $SERVICES_PRJ
+# Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+# reopened with the relevant failures.
+#
+apiVersion: v1
+data:
+  application.properties: |-
+    kafka.bootstrap-address=kafka-cluster-kafka-bootstrap.kafka-cluster-user1.svc:9092
+    kafka.group-id=passenger-service
+    kafka.concurrency=5
+
+    sender.destination.ride-requested=topic-ride-event
+    sender.destination.passenger-canceled=topic-passenger-event
+
+    listener.destination.driver-assigned=topic-driver-event
+
+    scheduler.pool.size=5
+    scheduler.delay.min=1
+    scheduler.delay.max=3
+
+    logging.config=file:/app/logging/logback.xml
+    logging.level.com.acme.ride=DEBUG
+    logging.level.com.acme.ride.passenger.tracing=INFO
+
+    jaeger.service-name=passenger-service
+    jaeger.sampler-type=ratelimiting
+    jaeger.sampler-param=1
+    jaeger.reporter-log-spans=false
+    jaeger.agent-host=localhost
+    jaeger.agent-port=6831
+
+kind: ConfigMap
+metadata:
+  creationTimestamp: 2019-04-04T20:24:04Z
+  name: passenger-service
+  namespace: ride-msa-services-user1
+  resourceVersion: "20648"
+  selfLink: /api/v1/namespaces/ride-msa-services-user1/configmaps/passenger-service
+  uid: 974dfd5c-5717-11e9-95c2-2cabcdef0010
 ----
+* Save the configmap.
+* If you are not familiar with _vi_, you can also edit the configmap in the OpenShift Console.
 . Modify the build pipeline for the passenger service to build from the tracing branch.
 . Trigger a new run of the pipeline. The pipeline should complete without errors.
 . Replace the deploymentconfig of the passenger service with a deploymentconfig that includes the Jaeger agent side-car container.
@@ -1922,21 +1842,13 @@ $ oc create configmap passenger-service --from-file=application.properties -n $S
 +
 ----
 $ oc delete dc passenger-service -n $SERVICES_PRJ
-$ oc process -f openshift/passenger-service/passenger-service-tracing-template.yaml -p APPLICATION_NAME=passenger-service -p APPLICATION_CONFIGMAP=passenger-service -p APPLICATION_TRUSTSTORE=enmasse-truststore -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
+$ oc process -f openshift/passenger-service/passenger-service-tracing-template.yaml -p APPLICATION_NAME=passenger-service -p APPLICATION_CONFIGMAP=passenger-service -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
 ----
 . A new deployment of the passenger service starts. Note that the pod consists of two containers.
 . Check the logs of the passenger service container. Scroll through the logs until you find the log entry for the configuration of the Jaeger tracer:
 +
 ----
-2018-08-28 07:54:34.446  INFO 1 --- [           main] io.jaegertracing.Configuration           : I
-nitialized tracer=Tracer(version=Java-0.27.0, serviceName=passenger-service, reporter=CompositeRep
-orter(reporters=[RemoteReporter(queueProcessor=RemoteReporter.QueueProcessor(open=true), sender=Ud
-pSender(udpTransport=ThriftUdpTransport(socket=java.net.DatagramSocket@1807e3f6, receiveBuf=null,
-receiveOffSet=-1, receiveLength=0)), closeEnqueueTimeout=1000), LoggingReporter(logger=Logger[io.j
-aegertracing.reporters.LoggingReporter])]), sampler=RateLimitingSampler(maxTracesPerSecond=1.0, ta
-gs={sampler.type=ratelimiting, sampler.param=1.0}), ipv4=176161276, tags={hostname=passenger-servi
-ce-4-rm897, jaeger.version=Java-0.27.0, ip=10.128.1.252}, zipkinSharedRpcSpan=false, baggageSetter
-=io.jaegertracing.baggage.BaggageSetter@480d3575, expandExceptionLogs=false)
+2019-04-06 15:07:04.331  INFO 1 --- [           main] io.jaegertracing.Configuration           : Initialized tracer=Tracer(version=Java-0.27.0, serviceName=passenger-service, reporter=RemoteReporter(queueProcessor=RemoteReporter.QueueProcessor(open=true), sender=UdpSender(udpTransport=ThriftUdpTransport(socket=java.net.DatagramSocket@1e1a0406, receiveBuf=null, receiveOffSet=-1, receiveLength=0)), closeEnqueueTimeout=1000), sampler=RateLimitingSampler(maxTracesPerSecond=1.0, tags={sampler.type=ratelimiting, sampler.param=1.0}), ipv4=176160944, tags={hostname=passenger-service-2-hbqm4, jaeger.version=Java-0.27.0, ip=10.128.0.176}, zipkinSharedRpcSpan=false, baggageSetter=io.jaegertracing.baggage.BaggageSetter@3cebbb30, expandExceptionLogs=false)
 ----
 
 === Add tracing to the Dispatch service
@@ -1949,15 +1861,82 @@ $ git checkout tracing
 $ git push -u gogs tracing
 ----
 . Add Jaeger tracing configuration to the dispatch service configmap.
-* Change directory to the `etc` folder in the dispatch service source code project.
-* Open the `application.properties` file. Note the additional configuration at the bottom of the file:
-* Set the value of the `amqp.host` property to the hostname of the EnMasse messaging service to the `amqp.host` property. Set the `postgresql.host` property to the host name of the PostgreSQL service. Save the file.
-* Delete the current configmap and create a new one from the `application.properties` file.
+* Open the dispatch service configmap for editing:
 +
 ----
-$ oc delete configmap dispatch-service -n $SERVICES_PRJ
-$ oc create configmap dispatch-service --from-file=application.properties --from-file=jbpm-quartz.properties -n $SERVICES_PRJ
+$ oc edit configmap dispatch-service -o yaml -n $SERVICES_PRJ
 ----
+* The configmap descriptor opens in a _vi_ editor. Add the following to the `application.properties` entry of the configmap. This is a YAML file, so indentation is important!
++
+----
+jaeger.service-name=dispatch-service
+jaeger.sampler-type=ratelimiting
+jaeger.sampler-param=1
+jaeger.reporter-log-spans=False
+jaeger.agent-host=localhost
+jaeger.agent-port=6831
+----
++
+Refer to the previous paragraph for details about these settings.
+* The configmap should look like:
++
+----
+# Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+# reopened with the relevant failures.
+#
+apiVersion: v1
+data:
+  application.properties: |-
+    postgresql.host=dispatch-service-postgresql
+
+    spring.datasource.username=jboss
+    spring.datasource.password=jboss
+    spring.datasource.url=jdbc:postgresql://${postgresql.host}:5432/rhpam
+
+    jbpm.quartz.configuration=/app/config/jbpm-quartz.properties
+    quartz.datasource.username=${spring.datasource.username}
+    quartz.datasource.password=${spring.datasource.password}
+    quartz.datasource.url=${spring.datasource.url}
+    quartz.datasource.dbcp2.maxTotal=20
+
+    narayana.dbcp.maxTotal=20
+
+    kafka.bootstrap-address=kafka-cluster-kafka-bootstrap.kafka-cluster-user1.svc:9092
+    kafka.group-id=dispatch-service
+    kafka.concurrency=5
+
+    listener.destination.ride-event=topic-ride-event
+    listener.destination.driver-assigned-event=topic-driver-event
+    listener.destination.passenger-canceled-event=topic-passenger-event
+
+    send.destination.assign_driver_command=topic-driver-command
+    send.destination.handle_payment_command=topic-passenger-command
+
+    dispatch.assign.driver.expire.duration=5M
+
+    logging.config=file:/app/logging/logback.xml
+    logging.level.org.jbpm.executor.impl=WARN
+    logging.level.org.apache.kafka.clients=WARN
+    logging.level.org.hibernate.orm.deprecation=ERROR
+    logging.level.com.acme.ride=DEBUG
+    logging.level.com.acme.ride.dispatch.tracing=INFO
+
+    jaeger.service-name=dispatch-service
+    jaeger.sampler-type=ratelimiting
+    jaeger.sampler-param=1
+    jaeger.reporter-log-spans=False
+    jaeger.agent-host=localhost
+    jaeger.agent-port=6831
+
+  jbpm-quartz.properties: |
+    #============================================================================
+    # Configure Main Scheduler Properties
+    #============================================================================
+...
+----
+* Save the configmap.
+* If you are not familiar with _vi_, you can also edit the configmap in the OpenShift Console.
 . Modify the build pipeline for the dispatch service to build from the tracing branch.
 . Trigger a new run of the pipeline. The pipeline should complete without errors.
 . Replace the deploymentconfig of the dispatch service with a deploymentconfig that includes the Jaeger agent side-car container.
@@ -1966,18 +1945,18 @@ $ oc create configmap dispatch-service --from-file=application.properties --from
 +
 ----
 $ oc delete dc dispatch-service -n $SERVICES_PRJ
-$ oc process -f openshift/dispatch-service/dispatch-service-tracing-template.yaml -p APPLICATION_NAME=dispatch-service -p APPLICATION_CONFIGMAP=dispatch-service -p APPLICATION_TRUSTSTORE=enmasse-truststore -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
+$ oc process -f openshift/dispatch-service/dispatch-service-tracing-template.yaml -p APPLICATION_NAME=dispatch-service -p APPLICATION_CONFIGMAP=dispatch-service -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
 ----
 . A new deployment of the dispatch service starts. Note that the pod consists of two containers.
 . Check the logs of the dispatch service container. Scroll through the logs until you find the log entry for the configuration of the Jaeger tracer:
 +
 ----
-2018-08-28 09:19:41.350 INFO 1 --- [ main] io.jaegertracing.Configuration : Initialized tracer=Tracer(version=Java-0.27.0, serviceName=dispatch-service, reporter=CompositeReporter(reporters=[RemoteReporter(queueProcessor=RemoteReporter.QueueProcessor(open=true), sender=UdpSender(udpTransport=ThriftUdpTransport(socket=java.net.DatagramSocket@45e6d1e0, receiveBuf=null, receiveOffSet=-1, receiveLength=0)), closeEnqueueTimeout=1000), LoggingReporter(logger=Logger[io.jaegertracing.reporters.LoggingReporter])]), sampler=RateLimitingSampler(maxTracesPerSecond=1.0, tags={sampler.type=ratelimiting, sampler.param=1.0}), ipv4=176160774, tags={hostname=dispatch-service-1-jzr4s, jaeger.version=Java-0.27.0, ip=10.128.0.6}, zipkinSharedRpcSpan=false, baggageSetter=io.jaegertracing.baggage.BaggageSetter@61db86bf, expandExceptionLogs=false)
+2019-04-06 15:35:41.831  INFO 1 --- [           main] io.jaegertracing.Configuration           : Initialized tracer=Tracer(version=Java-0.27.0, serviceName=dispatch-service, reporter=RemoteReporter(queueProcessor=RemoteReporter.QueueProcessor(open=true), sender=UdpSender(udpTransport=ThriftUdpTransport(socket=java.net.DatagramSocket@5dbb50f3, receiveBuf=null, receiveOffSet=-1, receiveLength=0)), closeEnqueueTimeout=1000), sampler=RateLimitingSampler(maxTracesPerSecond=1.0, tags={sampler.type=ratelimiting, sampler.param=1.0}), ipv4=176160950, tags={hostname=dispatch-service-2-n8lvm, jaeger.version=Java-0.27.0, ip=10.128.0.182}, zipkinSharedRpcSpan=false, baggageSetter=io.jaegertracing.baggage.BaggageSetter@4a2e7bcb, expandExceptionLogs=false)
 ----
 
 === Tracing in action
 
-. In a terminal window, use curl to call the REST endpoint of the passenger service:
+. In a terminal window, use _curl_ to call the REST endpoint of the passenger service:
 +
 ----
 $ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 1}' $PASSENGER_SERVICE_URL/simulate
@@ -1986,31 +1965,30 @@ $ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 1
 Expect to see one trace, generated from the REST call:
 +
 image::images/jaeger_trace.png[]
-* the trace consists of 13 spans, divided over the three services of the application.
+* The trace consists of 19 spans, divided over the three services of the application.
 . Click on the span to see the different spans and their relationships:
 +
 image::images/jaeger_trace_details.png[]
 * The spans reflect the message flow throughout the system
-* For JMS message senders, the duration is very short (couple of milliseconds or less), which is expected as the span wraps just the sending of the message.
-* For JMS message consumers the span includes the code execution within the message listener implementation. For example, the first span in the dispatch service includes the creation, execution and persistence of the dispatch process.
+* For Kafka consumers and producers, the duration is very short (couple of milliseconds or less), which is expected as the span wraps just the consuming or sending of the message.
 . Click on a particular span to see the different tags and metadata attached to the span:
 +
 image::images/jaeger_trace_details_1.png[]
-* Note the msgTraceId which was specifically added as a tag to the span in the implementation.
-. In a terminal window, use curl to call the REST endpoint of the passenger service to send a request that will be cancelled by the passenger:
+* Note the `msgTraceId` which was specifically added as a tag to the span in the implementation of the passenger service.
+. In a terminal window, use _curl_ to call the REST endpoint of the passenger service to send a request that will be canceled by the passenger:
 +
 ----
 $ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 2}' $PASSENGER_SERVICE_URL/simulate
 ----
-. In the Jaeger UI, navigate to the landing page. Refresh the traces by clicking on the `Find Traces` button. Expect to see a second trace, with 10 spans. Click on the trace to see the details:
+. In the Jaeger UI, navigate to the landing page. Refresh the traces by clicking on the `Find Traces` button. Expect to see a second trace, with 15 spans. Click on the trace to see the details:
 +
 image::images/jaeger_trace_details_2.png[]
-. In a terminal window, use curl to call the REST endpoint of the passenger service to send a request that will remain unassigned:
+. In a terminal window, use _curl_ to call the REST endpoint of the passenger service to send a request that will remain unassigned:
 +
 ----
 $ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 3}' $PASSENGER_SERVICE_URL/simulate
 ----
-. In the Jaeger UI, navigate to the landing page. Refresh the traces. Expect to see three traces. The most recent trace has where the with 10 spans.
+. In the Jaeger UI, navigate to the landing page. Refresh the traces. The most recent trace has 7 spans.
 +
 image::images/jaeger_trace_3.png[]
 +
@@ -2032,59 +2010,49 @@ This diagram illustrates the architecture of Prometheus:
 
 image::images/prometheus_architecture.png[]
 
-In this section of the lab you deploy Prometheus in your OpenShift environment, and configure it to scrape metrics from the EnMasse broker and the dispatch service.
+In this section of the lab you deploy Prometheus in your OpenShift environment, and configure it to scrape metrics from the Kafka broker, the dispatch service and the dispatch service database.
 
 === Deploy Prometheus
 
+We use an Ansible playbook to install Prometheus on OpenShift. +
+The playbook:
+
+* Creates a service account for Prometheus.
+* Gives the Prometheus service account cluster view rights in the tools, services and kafka cluster projects. +
+On OpenShift/Kubernetes, the discovery mechanism of Prometheus uses the Kubernetes API to discover targets, and this requires cluster view access rights.
+* Creates a configmap with the Prometheus configuration and Prometheus recording rules files for the Kafka cluster and the Dispatch service.
+** The Prometheus configuration defines the scrape jobs for the prometheus pods.
+** Prometheus recording rules allow you to precompute frequently needed or computationally expensive expressions and save their result as a new set of time series.
+* Deploys Prometheus on the OpenShift cluster. For this lab, we use non-persistent storage for the data collected by Prometheus.
+
+{empty} +
+
+. Make sure you are logged with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-. Create a service account for Prometheus in the tools project
-+
-----
-$ oc create sa prometheus -n $TOOLS_PRJ
-----
-. The Prometheus service account requires view access rights to be able to use the Kubernetes/OpenShift API.
-+
-----
-$ oc adm policy add-role-to-user view system:serviceaccount:$TOOLS_PRJ:prometheus -n $TOOLS_PRJ
-----
-. In order to discover services to monitor, the Prometheus service account also requires view access rights for the namespaces where the applications to be monitored are deployed.
-+
-----
-$ oc adm policy add-role-to-user view system:serviceaccount:$TOOLS_PRJ:prometheus -n $ENMASSE_PRJ
-$ oc adm policy add-role-to-user view system:serviceaccount:$TOOLS_PRJ:prometheus -n $SERVICES_PRJ
-----
-. Create a configmap with the Prometheus configuration file.
-+
-----
-$ oc create configmap prometheus --from-file=openshift/prometheus/prometheus.yaml -n $TOOLS_PRJ
-----
-+
-The configuration file is minimal at the moment. Scraping jobs will be added later on.
-+
-----
-rule_files:
-  - '*.rules'
-
-# global config
-global:
-  scrape_interval:     30s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
-  evaluation_interval: 30s # Evaluate rules every 15 seconds. The default is every 1 minute.
-  # scrape_timeout is set to the global default (10s).
-
-scrape_configs:
-----
-. Review the template for deployment of Prometheus at `openshift/prometheus/prometheus-template.yaml`.
-* The template defines a route, a service and a deployment API object. The route allows access to the Prometheus UI web application.
+. Review the `openshift/prometheus/prometheus-template.yaml` OpenShift template file. The template defines the route, service and deployment for Prometheus.
 * By default, the Prometheus UI web application is exposed over port 9090.
 * The Prometheus image runs under the prometheus service account.
 * The Prometheus metric data are stored on temporary storage on the pod’s node.
 * The data retention time is set to 6 hours.
 * The prometheus configmap is mounted inside the Prometheus pod in the etc/prometheus directory.
-. Deploy Prometheus.
+. Review the `openshift/prometheus/prometheus.yaml` Prometheus configuration file, and the `openshift/prometheus/kafka.rules` and `openshift/prometheus/dispatch-service.rules` Prometheus rule files.
+* The `prometheus.yaml` configuration file defines the scrape jobs for prometheus. It defines scrape jobs for kafka, the dispatch service and prometheus-sql.
+** For a detailed overview of the Prometheus configuration settings, refer to the https://prometheus.io/docs/prometheus/latest/configuration/configuration/[Prometheus configuration documentation]
+** `scrape_configs` contains the configuration settings for the scraping jobs.
+** There are three scraping jobs, with type `kubernetes_sd_configs`.
+** Kubernetes SD configurations allow retrieving scrape targets from the Kubernetes REST API and always staying synchronized with the cluster state.
+** A Kubernetes SD configuration has a role type to discover targets. Supported role types include node, pod, service, endpoint, ingress. The role type for the kafka job is endpoint. The endpoints role discovers targets from listed endpoints of a service. For each endpoint address one target is discovered per port.
+** The `namespaces` configuration allows to restrict the discovery of targets to a specified set of namespaces. For the `kafka` scraping job, the discovery is limited to the namespace of the Kafka broker.
+** `relabel_configs`: Relabeling is a powerful tool to dynamically rewrite the label set of a target before it gets scraped. Please refer to the Prometheus documentation for full details. +
+* The `kafka.rules` rules file has some examples for pre-computed metrics for Kafka. The rules calculate the rate per minute at which messages are added to each of the Kafka topics, as well as the total amount of memory and cpu consumed by the kafka cluster pods.
+* The `dispatch-service.rules` rules file contains pre-computed metrics based on data collected from the Dispatch service and the database.
+. Change directory to the `ansible` folder. Run the `prometheus.yml` playbook.
 +
 ----
-$ oc apply -f openshift/prometheus/prometheus-template.yaml -n $TOOLS_PRJ
+$ cd ansible
+$ ansible-playbook playbooks/prometheus.yml
 ----
+. Expect the playbook to run to completion without failures.
 . Get the URL for the `prometheus` route:
 +
 ----
@@ -2093,131 +2061,25 @@ $ echo "http://$(oc get route prometheus -o jsonpath='{.spec.host}' -n $TOOLS_PR
 . In a browser window, navigate to the URL of the `prometheus` route. Expect to see the Prometheus UI landing page:
 +
 image::images/prometheus_landing_page.png[]
+. In the Prometheus UI, navigate to _Status -> Targets_. Expect to see the scrape targets as defined in the Prometheus configuration file. Notice that only the `Kafka` target is up. There are six endpoints discovered - corresponding to the three Zookeeper pods and the three Kafka broker pods.
++
+image::images/prometheus_kafka_target.png[]
+. In the Prometheus UI, navigate to _Status -> Rules_. Expect to see the Prometheus rules as defined in the `dispatch-service.rules` and `kafka.rules` Prometheus rule files.
++
+image::images/prometheus_rules.png[]
+. In the Prometheus UI, navigate to the landing page, and open the metrics drop-down to see an overview of the metrics exposed by the Kafka and Zookeeper pods. Note that the metrics defined in the rule file appear as well in the list.
++
+image::images/prometheus_kafka_metrics.png[]
+. Prometheus has rudimentary metric plotting functionality. As an example, select the `kafka_pods_total_memory_used` metric from the metrics drop-down list. Click _Execute_ to display the metric values.
++
+image::images/prometheus_kafka_metrics_values.png[]
+. Click on the _Graph_ tab to see a graphical representation of the metric data.
++
+image::images/prometheus_kafka_metrics_graph.png[]
++
+Later in the lab, we will use Grafana to build a dahboard out of the metrics collected by Prometheus.
 
-=== Monitor the EnMasse broker
-
-. The EnMasse broker exposes Prometheus metrics at port 8080.
-+
-image::images/enmasse_prometheus_port.png[]
-+
-In the OpenShift console, navigate to the EnMasse broker pod, click on the `Terminal` tab and type `curl localhost:8080`. Expect to see the metrics exposed by the EnMasse broker in Prometheus format:
-+
-image::images/enmasse_prometheus_metrics.png[]
-. Define a scrape job on Prometheus to scrape the EnMasse broker metrics. +
-Open the `openshift/prometheus/prometheus.yaml` file in the `installation` project of the lab material in a text editor. Add the following contents to the file. Replace `<enmasse project>` with the name of OpenShift project where you deployed EnMasse.
-+
-----
-- job_name: 'enmasse'
-  kubernetes_sd_configs:
-  - role: pod
-    namespaces:
-      names:
-      - <enmasse project>
-
-  relabel_configs:
-  - source_labels: [__meta_kubernetes_pod_container_port_name]
-    action: keep
-    regex: artemismetrics.*
-  - source_labels: [__meta_kubernetes_pod_name]
-    action: replace
-    target_label: kubernetes_pod_name
-  - source_labels: [__meta_kubernetes_namespace]
-    action: replace
-    target_label: kubernetes_namespace
-----
-+
-At this point, the prometheus configuration file should look like:
-+
-----
-rule_files:
-  - '*.rules'
-
-# global config
-global:
-  scrape_interval:     30s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
-  evaluation_interval: 30s # Evaluate rules every 15 seconds. The default is every 1 minute.
-  # scrape_timeout is set to the global default (10s).
-
-scrape_configs:
-- job_name: 'enmasse'
-  kubernetes_sd_configs:
-  - role: pod
-    namespaces:
-      names:
-      - enmasse-bt
-
-  relabel_configs:
-  - source_labels: [__meta_kubernetes_pod_container_port_name]
-    action: keep
-    regex: artemismetrics.*
-  - source_labels: [__meta_kubernetes_pod_name]
-    action: replace
-    target_label: kubernetes_pod_name
-  - source_labels: [__meta_kubernetes_namespace]
-    action: replace
-    target_label: kubernetes_namespace
-----
-+
-* For a detailed overview of the Prometheus configuration settings, refer to the https://prometheus.io/docs/prometheus/latest/configuration/configuration/[Prometheus configuration documentation]
-* `scrape_configs` contains the configuration settings for the scraping jobs.
-* There is one scraping job named `enmasse` with type `kubernetes_sd_configs`.
-* Kubernetes SD configurations allow retrieving scrape targets from the Kubernetes REST API and always staying synchronized with the cluster state.
-* A Kubernetes SD configuration has a role type to discover targets. Supported role types include node, pod, service, endpoint, ingress. The role type for the enmasse job is pod. The pod role discovers all pods and exposes their containers as targets. For each declared port of a container, a single target is generated.
-* The `namespaces` configuration allows to restrict the discovery of targets to a specified set of namespaces. For the `enmasse` scraping job, the discovery is limited to the namespace of the Enmasse broker.
-* `relabel_configs`: Relabeling is a powerful tool to dynamically rewrite the label set of a target before it gets scraped. Multiple relabeling steps can be configured per scrape configuration. They are applied to the label set of each target in order of their appearance in the configuration file. Please refer to the Prometheus documentation for full details. +
-In short, the settings for the `enmasse` scraping job configure the job as follows:
-** Only the `artemismetrics` port is scraped
-** The `kubernetes_namespace` label is set to the value of the Kubernetes namespace of the discovered target. Labels help to select and filter metrics when building dashboards.
-** The `kubernetes_pod_name` label is set to the name of the Enmasse broker pod.
-. Replace the `prometheus` configmap with the modified file:
-+
-----
-$ oc delete configmap prometheus -n $TOOLS_PRJ
-$ oc create configmap prometheus --from-file=openshift/prometheus/prometheus.yaml -n $TOOLS_PRJ
-----
-. Scale the Prometheus pod up and down to force a restart of the Prometheus pod:
-+
-----
-$ oc scale deployment prometheus --replicas=0 -n $TOOLS_PRJ && oc scale deployment prometheus --replicas=1 -n $TOOLS_PRJ
-----
-. In a browser window, navigate to the Prometheus UI. Go to `Status -> Targets`. Expect to see the EnMasse target:
-+
-image::images/prometheus_target.png[]
-. On the Prometheus landing page, open the metric drop-down box to see an overview of the metrics exposed by the EnMasse broker:
-+
-image::images/prometheus_metrics.png[]
-. Select the `artemis_consumer_count metric`. Click on 	`Execute`. Expect to see the number of consumers per topic:
-+
-image::images/prometheus_metrics_2.png[]
-+
-Click on the `Graph` tab to see a graphical representation of the metrics:
-+
-image::images/prometheus_metrics_3.png[]
-. Select the `artemis_message_count` metric. This metric returns the number of messages in a topic or queue that are not delivered to a consumer. The expected value is 0 for all the topics:
-+
-image::images/prometheus_metrics_4.png[]
-. To see the metrics in action, scale down the dispatch service to 0 replicas:
-+
-----
-$ oc scale dc dispatch-service --replicas=0 -n $SERVICES_PRJ
-----
-. Wait until the dispatch service pod is terminated, and put some load on the system:
-+
-----
-$ curl -X POST -H "Content-type: application/json" -d '{"messages": 100, "type": 0}' $PASSENGER_SERVICE_URL/simulate
-----
-. Observe the `artemis_message_count` metrics graph on the Prometheus console. The message count for the `topic-ride-event` topic goes up to 100:
-+
-image::images/prometheus_graph.png[]
-. Scale up the dispatch service to 1 replica:
-+
-----
-$ oc scale dc dispatch-service --replicas=1 -n $SERVICES_PRJ
-----
-+
-Observe how the message count for the `topic-ride-event` topic drops back to 0.
-
-=== Monitor the dispatch service
+=== Instrumenting the dispatch service
 
 Micrometer (https://micrometer.io/) is a monitoring library which provides a simple facade over the instrumentation clients for the most popular monitoring systems, allowing you to instrument your JVM-based application code without vendor lock-in. Think SLF4J, but for metrics. As the default monitoring and instrumenting library for Spring Boot (since version 2.0), it is rapidly gaining popularity in the community.
 
@@ -2227,23 +2089,18 @@ Micrometer comes with a number of exporters, one of these being a Prometheus exp
 
 The `micrometer` branch of dispatch service project contains a version of the dispatch service instrumented with Micrometer.
 
+Since Spring Boot 2.0, Micrometer is automatically added to the project dependencies when using Spring Boot Actuator.
+
 * The following dependencies were added to the project `pom.xml` file:
 +
 ----
     <dependency>
       <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-spring-legacy</artifactId>
-      <version>1.0.6</version>
-    </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-prometheus</artifactId>
-      <version>1.0.6</version>
     </dependency>
 ----
 +
-** `micrometer-spring-legacy` provides integration between Micrometer and Spring Boot 1.x
-** `micrometer-registry-prometheus` exposes the metrrics collected by Micrometer as Prometheus end point.
+** `micrometer-registry-prometheus` exposes the metrics collected by Micrometer as Prometheus scraping endpoint.
 
 * The code of the `RideEventsMessageListener`, `PassengerCanceledEventMessageListener` and `DriverAssignedMessageListener` classes have been instrumented with Micrometer code to measure the time required to process incoming messages.
 +
@@ -2314,106 +2171,29 @@ node ('maven-with-pvc') {
 . Trigger a new run of the pipeline. The pipeline should complete without errors.
 
 . Check that Micrometer metrics are exposed as Prometheus endpoint. +
-In the OpenShift console, navigate to the dispatch service pod, click on the `Terminal` tab and type `curl localhost:8080/prometheus`. Expect to see the metrics exposed by Micrometer in Prometheus format:
+In the OpenShift console, navigate to the dispatch service pod, click on the `Terminal` tab and type `curl localhost:8080/actuator/prometheus`. Expect to see the metrics exposed by Micrometer in Prometheus format:
 +
-image::images/dispatch-service-prometheus-metrics-2.png[]
+image::images/dispatch_service_prometheus_metrics.png[]
 
-. Define a scrape job on Prometheus to scrape the dispatch service metrics. Open the `openshift/prometheus/prometheus.yaml` file in the `installation` project of the lab material in a text editor. Add the following contents to the end of the file. Replace `<services project>` with the name of OpenShift project where you deployed the dispatch service.
-+
-----
-- job_name: 'dispatch-service'
-  kubernetes_sd_configs:
-  - role: endpoints
-    namespaces:
-      names:
-      - <services project>
-
-  relabel_configs:
-  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
-    action: keep
-    regex: true
-  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
-    action: replace
-    target_label: __metrics_path__
-    regex: (.+)
-  - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
-    action: replace
-    target_label: __address__
-    regex: ([^:]+)(?::\d+)?;(\d+)
-    replacement: $1:$2
-  - source_labels: [__meta_kubernetes_namespace]
-    action: replace
-    target_label: kubernetes_namespace
-  - source_labels: [__meta_kubernetes_service_name]
-    action: replace
-    target_label: kubernetes_name
-----
-* The role type for the scrape job is `endpoints`. The endpoints role discovers targets from listed endpoints of a Kubernetes service. For each endpoint address one target is discovered per port. If the endpoint is backed by a pod, all additional container ports of the pod, not bound to an endpoint port, are discovered as targets as well.
-* A discovered endpoint requires an annotation `prometheus.io/scrape` set to true in order to be scraped.
-* The `prometheus.io/path` annotation defines the path of the prometheus HTTP endpoint.
-* The `prometheus.io/port` annotation defines the port of the prometheus HTTP endpoint.
-
-. Prometheus uses rule files to configure recording rules. Recording rules allow to precompute frequently needed or computationally expensive expressions and save their result as a new set of time series. Querying the precomputed result will then often be much faster than executing the original expression every time it is needed.
-* As an example, let’s say you want to monitor the average time required to process a `RiderequestedEvent` message in the dispatch service over a sliding window of 5 minutes. Using the Prometheus PromQL syntax, this can be expressed as:
-+
-----
-rate(dispatch_service_message_process_seconds_sum{kubernetes_name="dispatch-service",type="RideRequestedEvent"}[5m])/rate(dispatch_service_message_process_seconds_count{kubernetes_name="dispatch-service",type="RideRequestedEvent"}[5m])
-----
-* Review the recording rules file at `openshift/prometheus/dispatch-service.rules`:
-+
-----
-groups:
-- name: dispatch_service_process_message
-  rules:
-  - record: message:riderequested:rate5m
-    expr: rate(dispatch_service_message_process_seconds_sum{kubernetes_name="dispatch-service",type="RideRequestedEvent"}[5m])/rate(dispatch_service_message_process_seconds_count{kubernetes_name="dispatch-service",type="RideRequestedEvent"}[5m])
-  - record: message:ridestarted:rate5m
-    expr: rate(dispatch_service_message_process_seconds_sum{kubernetes_name="dispatch-service",type="RideStartedEvent"}[5m])/rate(dispatch_service_message_process_seconds_count{kubernetes_name="dispatch-service",type="RideStartedEvent"}[5m])
-  - record: message:rideended:rate5m
-    expr: rate(dispatch_service_message_process_seconds_sum{kubernetes_name="dispatch-service",type="RideEndedEvent"}[5m])/rate(dispatch_service_message_process_seconds_count{kubernetes_name="dispatch-service",type="RideEndedEvent"}[5m])
-  - record: message:driverassigned:rate5m
-    expr: rate(dispatch_service_message_process_seconds_sum{kubernetes_name="dispatch-service",type="DriverAssignedEvent"}[5m])/rate(dispatch_service_message_process_seconds_count{kubernetes_name="dispatch-service",type="DriverAssignedEvent"}[5m])
-  - record: message:passengercanceled:rate5m
-    expr: rate(dispatch_service_message_process_seconds_sum{kubernetes_name="dispatch-service",type="PassengerCanceledEvent"}[5m])/rate(dispatch_service_message_process_seconds_count{kubernetes_name="dispatch-service",type="PassengerCanceledEvent"}[5m])
-- name: dispatch_service_jvm
-  rules:
-  - record: jvm:heap:max
-    expr: sum(jvm_memory_max_bytes{area="heap",kubernetes_name="dispatch-service"}) by (pod_name)
-  - record: jvm:heap:used
-    expr: sum(jvm_memory_used_bytes{area="heap",kubernetes_name="dispatch-service"}) by (pod_name)
-----
-
-. Replace the `prometheus` configmap with the modified `prometheus.yaml` and the `dispatch-service.rules` file:
-+
-----
-$ oc delete configmap prometheus -n $TOOLS_PRJ
-$ oc create configmap prometheus --from-file=openshift/prometheus/prometheus.yaml --from-file=openshift/prometheus/dispatch-service.rules -n $TOOLS_PRJ
-----
-
+. The Prometheus discovery mechanism for Kubernetes endpoints uses annotations on the service to discover endpoints that need to be scraped. +
 . Patch the `dispatch-service` service to add the required annotations for the Prometheus scraping job:
 +
 ----
-$ oc patch service dispatch-service -p '{"metadata":{"annotations":{"prometheus.io/path":"/prometheus","prometheus.io/port":"8080","prometheus.io/scrape":"true"}}}' -n $SERVICES_PRJ
+$ oc patch service dispatch-service -p '{"metadata":{"annotations":{"prometheus.io/path":"/actuator/prometheus","prometheus.io/port":"8080","prometheus.io/scrape":"true"}}}' -n $SERVICES_PRJ
 ----
 
-. Scale the Prometheus pod up and down to force a restart of the Prometheus pod:
+. In a browser window, navigate to the Prometheus UI. Go to `Status -> Targets`. Expect to see that the dispatch service target has been discovered:
 +
-----
-$ oc scale deployment prometheus --replicas=0 -n $TOOLS_PRJ && oc scale deployment prometheus --replicas=1 -n $TOOLS_PRJ
-----
-. In a browser window, navigate to the Prometheus UI. Go to `Status -> Targets`. Expect to see the dispatch service target:
-+
-image::images/prometheus_target_1.png[]
+image::images/prometheus_dispatch_service_target.png[]
 
-. On the Prometheus landing page, open the metric drop-down box to see an overview of the metrics exposed by the EnMasse broker and the dispatch service. Note that the dispatch service exposes metrics pertaining to the datasource connection pools (metrics starting with `xa_connections` and `nonXa_connections`)
-
-. In the Prometheus UI, navigate to `Status -> Rules`. Expect to see the rules defined in the `dispatch-service.rules` file:
+. On the Prometheus landing page, open the metric drop-down box. Notice that the metrics exposed by the dispatch service have been added to the list of available metrics.
 +
-image::images/prometheus_rules-2.png[]
+image::images/prometheus_dispatch_service_metrics.png[]
 
-. In the Rules view click on one of the rules, for example `message:riderequested:rate5m`. The rule expression is copied into the metric box in the landing page and executed.
+. The `dispatch-service.rules` Prometheus rules file defines some pre-computed metrics. One of them is `message:riderequested:rate5m`, which calculates the avarage time required to process a `RideRequestedEvent` message over a time window of 5 minutes. +
+In the Prometheus UI, select the `message:riderequested:rate5m` from the metrics drop-down box, and click _Execute_.
 +
-image::images/prometheus_metrics_6.png[]
+image::images/prometheus_dispatch_service_graph.png[]
 . Put some load on the system:
 +
 ----
@@ -2421,152 +2201,103 @@ $ curl -X POST -H "Content-type: application/json" -d '{"messages": 500, "type":
 ----
 . Observe the graph of the `message:riderequested:rate5m` metrics - you need to click `Execute` to refresh the graph:
 +
-image::images/prometheus_graph_7.png[]
+image::images/prometheus_dispatch_service_graph_2.png[]
 
 === SQL metrics
 
 https://github.com/chop-dbhi/prometheus-sql[Prometheus SQL] is a service that generates basic metrics for SQL result sets and exposes them as Prometheus metrics. It executes SQL queries at a regular interval and exposes the resultset as Prometheus compatible time series metrics.
 
-In this section of the lab, we leverage Prometheus SQL to measure the number of `Ride` entities per status over a sliding time window, as well as the rate of process instances created.
+In this section of the lab, we leverage Prometheus SQL to measure the number of `Ride` entities reated per status over a sliding time window, as well as the rate of process instances created.
+
+NOTE: The next release of RHPAM will expose out-of-the-box Prometheus compatible metrics. This will make the need for somethng like Prometheus SQL obsolete.
 
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-. Review the Prometheus SQL configuration file at `openshift/prometheus-sql/prometheus-sql.yml`. The configuration defines the database(s) to connect to:
-+
-----
-defaults:
-  data-source: datasource
-  query-interval: 30s
-  query-timeout: 5s
-  query-value-on-error: -1
-
-# Defined data sources
-data-sources:
-  datasource:
-    driver: postgresql
-    properties:
-      host: dispatch-service-postgresql
-      port: 5432
-      user: jboss
-      password: jboss
-      database: rhpam
-      sslmode: disable
-----
-. The queries to execute are defined in the `openshift/prometheus-sql/queries.yml` file:
-+
-----
-- ride_per_status:
-    sql: >
-        SELECT status, count(id) as cnt FROM ride GROUP BY status
-    data-field: cnt
-- ride_created:
-    sql: >
-        SELECT processname, count(1) as cnt FROM processinstancelog GROUP BY processname
-    data-field: cnt
-----
-* `data-field` defines which column to expose as metrics.
-* The Prometheus metrics are prefixed with `query_result_`.
-. Create the configmap in the services project on OpenShift:
-+
-----
-$ oc create configmap prometheus-sql-config --from-file=openshift/prometheus-sql/prometheus-sql.yml --from-file=openshift/prometheus-sql/queries.yml -n $SERVICES_PRJ
-----
 . Review the Prometheus SQL template at `openshift/prometheus-sql/prometheus-sql-template.yaml`.
-. Deploy the Prometheus SQL image in the services project:
+. Change directory to the `ansible` folder. Run the `prometheus_sql.yml` playbook.
 +
 ----
-$ oc create -f openshift/prometheus-sql/prometheus-sql-template.yaml -n $SERVICES_PRJ
+$ cd ansible
+$ ansible-playbook playbooks/prometheus_sql.yml
 ----
-. Check the logs of the `prometheussql` pod. Expect to see something like:
+. Expect the playbook to run to completion without failures.
+. The playbook deploys the Prometheus SQL pod in the tools project. Prometheus SQL is configured using a configmap. Review the contents of the `prometheus-sql-config` configmap in the tools project:
 +
 ----
-2018/09/02 07:56:56 prometheus-sql starting up...
-2018/09/02 07:56:56 Load config from file [/config/prometheus-sql.yml]
-2018/09/02 07:56:56 Load queries from file [/config/queries.yml]
-2018/09/02 07:56:56 * Listening on 0.0.0.0:8080...
-[ride_per_status] 2018/09/02 07:56:56 Fetch took 27.982118ms
-Creating ride_per_status{"status":6}
-Creating ride_per_status{"status":7}
-Creating ride_per_status{"status":4}
-Registering metric ride_per_status{"status":4}
-Registering metric ride_per_status{"status":7}
-Registering metric ride_per_status{"status":6}
-[ride_created] 2018/09/02 07:56:56 Fetch took 30.410054ms
-Creating ride_created{"processname":"dispatch-process"}
-Registering metric ride_created{"processname":"dispatch-process"}
-[ride_per_status] 2018/09/02 07:57:26 Fetch took 788.363µs
-[ride_created] 2018/09/02 07:57:26 Fetch took 2.983659ms
+$ oc get configmap prometheus-sql-config -o yaml -n $TOOLS_PRJ
 ----
++
+----
+apiVersion: v1
+data:
+  prometheus-sql.yml: |
+    # Show all possible defaults keys
+    defaults:
+      data-source: datasource
+      query-interval: 10s
+      query-timeout: 5s
+      query-value-on-error: -1
 
-. Define a scrape job on Prometheus to scrape the SQL metrics. Open the `openshift/prometheus/prometheus.yaml` file in the `installation` project of the lab material in a text editor. Add the following contents to the end of the file. Replace `<services project>` with the name of OpenShift project where you deployed the dispatch service.
-+
+    # Defined data sources
+    data-sources:
+      datasource:
+        driver: postgresql
+        properties:
+          host: dispatch-service-postgresql.ride-msa-services-user1.svc
+          port: 5432
+          user: jboss
+          password: jboss
+          database: rhpam
+          sslmode: disable
+  queries.yml: |-
+    - ride_per_status:
+        sql: >
+            SELECT status, count(id) as cnt FROM ride GROUP BY status
+        data-field: cnt
+    - ride_created:
+        sql: >
+            SELECT processname, count(1) as cnt FROM processinstancelog GROUP BY processname
+        data-field: cnt
+kind: ConfigMap
+metadata:
+...
 ----
-- job_name: 'dispatch-service-pgsql'
-  kubernetes_sd_configs:
-  - role: service
-    namespaces:
-      names:
-      - services-bt
+* The database connection properties are defined in `prometheus-sql.yml`.
+* The queries to execute are defined in `queries.yml`.
+** `data-field` defines which column to expose as metrics.
+** The Prometheus metrics are prefixed with `query_result_`.
+. Check the logs of the `prometheussql` pod in the tools project. Expect to see something like:
++
+image::images/prometheussql_logs.png[]
 
-  relabel_configs:
-  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_probe]
-    action: keep
-    regex: true
-  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
-    action: replace
-    target_label: __metrics_path__
-    regex: (.+)
-  - source_labels: [__meta_kubernetes_namespace]
-    action: replace
-    target_label: kubernetes_namespace
-  - source_labels: [__meta_kubernetes_service_name]
-    action: replace
-    target_label: kubernetes_name
-----
-. Prometheus uses rule files to configure recording rules. Recording rules allow to precompute frequently needed or computationally expensive expressions and save their result as a new set of time series. Querying the precomputed result will then often be much faster than executing the original expression every time it is needed.
-* As an example, let’s say you want to monitor the per-second rate of creation of dispatch process instances , as measured over the last 5 minutes. Using the Prometheus PromQL syntax, this can be expressed as:
+. In a browser window, navigate to the Prometheus UI. Go to _Status -> Targets_. Expect to see that the dispatch service target has been discovered:
 +
-----
-rate(query_result_ride_created{processname="dispatch-process"}[5m])
-----
-* Review the recording rules file at `openshift/prometheus/dispatch-service-sql.rules`:
+image::images/prometheus_prometheussql_target.png[]
+
+. As part of the `dispatch-service.sql` Prometheus rule file, some pre-computed Prometheus metrics were defined based on the metrics exposed by Prometheus SQL:
 +
 ----
 groups:
 - name: dispatch_service_ride_status
   rules:
   - record: ride:requested:rate5m
-    expr: rate(query_result_ride_per_state{state="1"}[5m])
+    expr: rate(query_result_ride_per_status{status="1"}[5m])
   - record: ride:assigned:rate5m
-    expr: rate(query_result_ride_per_state{state="2"}[5m])
+    expr: rate(query_result_ride_per_status{status="2"}[5m])
   - record: ride:canceled:rate5m
-    expr: rate(query_result_ride_per_state{state="4"}[5m])
+    expr: rate(query_result_ride_per_status{status="4"}[5m])
   - record: ride:started:rate5m
-    expr: rate(query_result_ride_per_state{state="5"}[5m])
+    expr: rate(query_result_ride_per_status{status="5"}[5m])
   - record: ride:ended:rate5m
-    expr: rate(query_result_ride_per_state{state="6"}[5m])
+    expr: rate(query_result_ride_per_status{status="6"}[5m])
   - record: ride:expired:rate5m
-    expr: rate(query_result_ride_per_state{state="7"}[5m])
+    expr: rate(query_result_ride_per_status{status="7"}[5m])
   - record: ride:created:rate5m
     expr: rate(query_result_ride_created{processname="dispatch-process"}[5m])
 ----
-. Replace the `prometheus` configmap with the modified `prometheus.yaml` and the `dispatch-service.rules` and `dispatch-service-sql.rules` files:
-+
-----
-$ oc delete configmap prometheus -n $TOOLS_PRJ
-$ oc create configmap prometheus --from-file=openshift/prometheus/prometheus.yaml --from-file=openshift/prometheus/dispatch-service.rules --from-file=openshift/prometheus/dispatch-service-sql.rules -n $TOOLS_PRJ
-----
-. Scale the Prometheus pod up and down to force a restart of the Prometheus pod:
-+
-----
-$ oc scale deployment prometheus --replicas=0 -n $TOOLS_PRJ && oc scale deployment prometheus --replicas=1 -n $TOOLS_PRJ
-----
-. In a browser window, navigate to the Prometheus UI. Go to `Status -> Targets`. Expect to see the `dispatch-service-pgsql` target:
-+
-image::images/prometheus_target_2.png[]
-. In the Prometheus UI, navigate to `Status -> Rules`. Expect to see the rules defined in the `dispatch-service-sql.rules` file:
-+
-image::images/prometheus_rules.png[]
-. In the Rules view click on one of the rules, for example `ride:created:5m`. The rule expression is copied into the metric box in the landing page and executed.
+* The `ride:<status>:rate5m` metrics calculate the per-second rate of `ride` entities per status in the database over the last 5 minutes.
+* The `ride:created:rate5m` metric calculates the per-second rate of `dispatch-process` process instances created in the database over the last 5 minutes.
+
+. In the Prometheus UI, navigate to _Status -> Rules_. In the Rules view, navigate to the `dispatch_service_ride_status` section, and click on the `ride:created:rate5m` rule. The rule expression is copied into the metric box in the landing page and executed.
 +
 image::images/prometheus_metrics_5.png[]
 . Put some load on the system:
