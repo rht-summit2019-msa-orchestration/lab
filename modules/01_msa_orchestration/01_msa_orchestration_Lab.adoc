@@ -2089,23 +2089,18 @@ Micrometer comes with a number of exporters, one of these being a Prometheus exp
 
 The `micrometer` branch of dispatch service project contains a version of the dispatch service instrumented with Micrometer.
 
+Since Spring Boot 2.0, Micrometer is automatically added to the project dependencies when using Spring Boot Actuator.
+
 * The following dependencies were added to the project `pom.xml` file:
 +
 ----
     <dependency>
       <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-spring-legacy</artifactId>
-      <version>1.0.6</version>
-    </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-prometheus</artifactId>
-      <version>1.0.6</version>
     </dependency>
 ----
 +
-** `micrometer-spring-legacy` provides integration between Micrometer and Spring Boot 1.x
-** `micrometer-registry-prometheus` exposes the metrrics collected by Micrometer as Prometheus end point.
+** `micrometer-registry-prometheus` exposes the metrics collected by Micrometer as Prometheus scraping endpoint.
 
 * The code of the `RideEventsMessageListener`, `PassengerCanceledEventMessageListener` and `DriverAssignedMessageListener` classes have been instrumented with Micrometer code to measure the time required to process incoming messages.
 +
@@ -2176,106 +2171,29 @@ node ('maven-with-pvc') {
 . Trigger a new run of the pipeline. The pipeline should complete without errors.
 
 . Check that Micrometer metrics are exposed as Prometheus endpoint. +
-In the OpenShift console, navigate to the dispatch service pod, click on the `Terminal` tab and type `curl localhost:8080/prometheus`. Expect to see the metrics exposed by Micrometer in Prometheus format:
+In the OpenShift console, navigate to the dispatch service pod, click on the `Terminal` tab and type `curl localhost:8080/actuator/prometheus`. Expect to see the metrics exposed by Micrometer in Prometheus format:
 +
-image::images/dispatch-service-prometheus-metrics-2.png[]
+image::images/dispatch_service_prometheus_metrics.png[]
 
-. Define a scrape job on Prometheus to scrape the dispatch service metrics. Open the `openshift/prometheus/prometheus.yaml` file in the `installation` project of the lab material in a text editor. Add the following contents to the end of the file. Replace `<services project>` with the name of OpenShift project where you deployed the dispatch service.
-+
-----
-- job_name: 'dispatch-service'
-  kubernetes_sd_configs:
-  - role: endpoints
-    namespaces:
-      names:
-      - <services project>
-
-  relabel_configs:
-  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
-    action: keep
-    regex: true
-  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
-    action: replace
-    target_label: __metrics_path__
-    regex: (.+)
-  - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
-    action: replace
-    target_label: __address__
-    regex: ([^:]+)(?::\d+)?;(\d+)
-    replacement: $1:$2
-  - source_labels: [__meta_kubernetes_namespace]
-    action: replace
-    target_label: kubernetes_namespace
-  - source_labels: [__meta_kubernetes_service_name]
-    action: replace
-    target_label: kubernetes_name
-----
-* The role type for the scrape job is `endpoints`. The endpoints role discovers targets from listed endpoints of a Kubernetes service. For each endpoint address one target is discovered per port. If the endpoint is backed by a pod, all additional container ports of the pod, not bound to an endpoint port, are discovered as targets as well.
-* A discovered endpoint requires an annotation `prometheus.io/scrape` set to true in order to be scraped.
-* The `prometheus.io/path` annotation defines the path of the prometheus HTTP endpoint.
-* The `prometheus.io/port` annotation defines the port of the prometheus HTTP endpoint.
-
-. Prometheus uses rule files to configure recording rules. Recording rules allow to precompute frequently needed or computationally expensive expressions and save their result as a new set of time series. Querying the precomputed result will then often be much faster than executing the original expression every time it is needed.
-* As an example, let’s say you want to monitor the average time required to process a `RiderequestedEvent` message in the dispatch service over a sliding window of 5 minutes. Using the Prometheus PromQL syntax, this can be expressed as:
-+
-----
-rate(dispatch_service_message_process_seconds_sum{kubernetes_name="dispatch-service",type="RideRequestedEvent"}[5m])/rate(dispatch_service_message_process_seconds_count{kubernetes_name="dispatch-service",type="RideRequestedEvent"}[5m])
-----
-* Review the recording rules file at `openshift/prometheus/dispatch-service.rules`:
-+
-----
-groups:
-- name: dispatch_service_process_message
-  rules:
-  - record: message:riderequested:rate5m
-    expr: rate(dispatch_service_message_process_seconds_sum{kubernetes_name="dispatch-service",type="RideRequestedEvent"}[5m])/rate(dispatch_service_message_process_seconds_count{kubernetes_name="dispatch-service",type="RideRequestedEvent"}[5m])
-  - record: message:ridestarted:rate5m
-    expr: rate(dispatch_service_message_process_seconds_sum{kubernetes_name="dispatch-service",type="RideStartedEvent"}[5m])/rate(dispatch_service_message_process_seconds_count{kubernetes_name="dispatch-service",type="RideStartedEvent"}[5m])
-  - record: message:rideended:rate5m
-    expr: rate(dispatch_service_message_process_seconds_sum{kubernetes_name="dispatch-service",type="RideEndedEvent"}[5m])/rate(dispatch_service_message_process_seconds_count{kubernetes_name="dispatch-service",type="RideEndedEvent"}[5m])
-  - record: message:driverassigned:rate5m
-    expr: rate(dispatch_service_message_process_seconds_sum{kubernetes_name="dispatch-service",type="DriverAssignedEvent"}[5m])/rate(dispatch_service_message_process_seconds_count{kubernetes_name="dispatch-service",type="DriverAssignedEvent"}[5m])
-  - record: message:passengercanceled:rate5m
-    expr: rate(dispatch_service_message_process_seconds_sum{kubernetes_name="dispatch-service",type="PassengerCanceledEvent"}[5m])/rate(dispatch_service_message_process_seconds_count{kubernetes_name="dispatch-service",type="PassengerCanceledEvent"}[5m])
-- name: dispatch_service_jvm
-  rules:
-  - record: jvm:heap:max
-    expr: sum(jvm_memory_max_bytes{area="heap",kubernetes_name="dispatch-service"}) by (pod_name)
-  - record: jvm:heap:used
-    expr: sum(jvm_memory_used_bytes{area="heap",kubernetes_name="dispatch-service"}) by (pod_name)
-----
-
-. Replace the `prometheus` configmap with the modified `prometheus.yaml` and the `dispatch-service.rules` file:
-+
-----
-$ oc delete configmap prometheus -n $TOOLS_PRJ
-$ oc create configmap prometheus --from-file=openshift/prometheus/prometheus.yaml --from-file=openshift/prometheus/dispatch-service.rules -n $TOOLS_PRJ
-----
-
+. The Prometheus discovery mechanism for Kubernetes endpoints uses annotations on the service to discover endpoints that need to be scraped. +
 . Patch the `dispatch-service` service to add the required annotations for the Prometheus scraping job:
 +
 ----
-$ oc patch service dispatch-service -p '{"metadata":{"annotations":{"prometheus.io/path":"/prometheus","prometheus.io/port":"8080","prometheus.io/scrape":"true"}}}' -n $SERVICES_PRJ
+$ oc patch service dispatch-service -p '{"metadata":{"annotations":{"prometheus.io/path":"/actuator/prometheus","prometheus.io/port":"8080","prometheus.io/scrape":"true"}}}' -n $SERVICES_PRJ
 ----
 
-. Scale the Prometheus pod up and down to force a restart of the Prometheus pod:
+. In a browser window, navigate to the Prometheus UI. Go to `Status -> Targets`. Expect to see that the dispatch service target has been discovered:
 +
-----
-$ oc scale deployment prometheus --replicas=0 -n $TOOLS_PRJ && oc scale deployment prometheus --replicas=1 -n $TOOLS_PRJ
-----
-. In a browser window, navigate to the Prometheus UI. Go to `Status -> Targets`. Expect to see the dispatch service target:
-+
-image::images/prometheus_target_1.png[]
+image::images/prometheus_dispatch_service_target.png[]
 
-. On the Prometheus landing page, open the metric drop-down box to see an overview of the metrics exposed by the EnMasse broker and the dispatch service. Note that the dispatch service exposes metrics pertaining to the datasource connection pools (metrics starting with `xa_connections` and `nonXa_connections`)
-
-. In the Prometheus UI, navigate to `Status -> Rules`. Expect to see the rules defined in the `dispatch-service.rules` file:
+. On the Prometheus landing page, open the metric drop-down box. Notice that the metrics exposed by the dispatch service have been added to the list of available metrics.
 +
-image::images/prometheus_rules-2.png[]
+image::images/prometheus_dispatch_service_metrics.png[]
 
-. In the Rules view click on one of the rules, for example `message:riderequested:rate5m`. The rule expression is copied into the metric box in the landing page and executed.
+. The `dispatch-service.rules` Prometheus rules file defines some pre-computed metrics. One of them is `message:riderequested:rate5m`, which calculates the avarage time required to process a `RideRequestedEvent` message over a time window of 5 minutes. +
+In the Prometheus UI, select the `message:riderequested:rate5m` from the metrics drop-down box, and click _Execute_.
 +
-image::images/prometheus_metrics_6.png[]
+image::images/prometheus_dispatch_service_graph.png[]
 . Put some load on the system:
 +
 ----
@@ -2283,7 +2201,7 @@ $ curl -X POST -H "Content-type: application/json" -d '{"messages": 500, "type":
 ----
 . Observe the graph of the `message:riderequested:rate5m` metrics - you need to click `Execute` to refresh the graph:
 +
-image::images/prometheus_graph_7.png[]
+image::images/prometheus_dispatch_service_graph_2.png[]
 
 === SQL metrics
 
