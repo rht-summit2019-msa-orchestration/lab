@@ -2010,59 +2010,49 @@ This diagram illustrates the architecture of Prometheus:
 
 image::images/prometheus_architecture.png[]
 
-In this section of the lab you deploy Prometheus in your OpenShift environment, and configure it to scrape metrics from the EnMasse broker and the dispatch service.
+In this section of the lab you deploy Prometheus in your OpenShift environment, and configure it to scrape metrics from the Kafka broker, the dispatch service and the dispatch service database.
 
 === Deploy Prometheus
 
+We use an Ansible playbook to install Prometheus on OpenShift. +
+The playbook:
+
+* Creates a service account for Prometheus.
+* Gives the Prometheus service account cluster view rights in the tools, services and kafka cluster projects. +
+On OpenShift/Kubernetes, the discovery mechanism of Prometheus uses the Kubernetes API to discover targets, and this requires cluster view access rights.
+* Creates a configmap with the Prometheus configuration and Prometheus recording rules files for the Kafka cluster and the Dispatch service.
+** The Prometheus configuration defines the scrape jobs for the prometheus pods.
+** Prometheus recording rules allow you to precompute frequently needed or computationally expensive expressions and save their result as a new set of time series.
+* Deploys Prometheus on the OpenShift cluster. For this lab, we use non-persistent storage for the data collected by Prometheus.
+
+{empty} +
+
+. Make sure you are logged with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-. Create a service account for Prometheus in the tools project
-+
-----
-$ oc create sa prometheus -n $TOOLS_PRJ
-----
-. The Prometheus service account requires view access rights to be able to use the Kubernetes/OpenShift API.
-+
-----
-$ oc adm policy add-role-to-user view system:serviceaccount:$TOOLS_PRJ:prometheus -n $TOOLS_PRJ
-----
-. In order to discover services to monitor, the Prometheus service account also requires view access rights for the namespaces where the applications to be monitored are deployed.
-+
-----
-$ oc adm policy add-role-to-user view system:serviceaccount:$TOOLS_PRJ:prometheus -n $ENMASSE_PRJ
-$ oc adm policy add-role-to-user view system:serviceaccount:$TOOLS_PRJ:prometheus -n $SERVICES_PRJ
-----
-. Create a configmap with the Prometheus configuration file.
-+
-----
-$ oc create configmap prometheus --from-file=openshift/prometheus/prometheus.yaml -n $TOOLS_PRJ
-----
-+
-The configuration file is minimal at the moment. Scraping jobs will be added later on.
-+
-----
-rule_files:
-  - '*.rules'
-
-# global config
-global:
-  scrape_interval:     30s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
-  evaluation_interval: 30s # Evaluate rules every 15 seconds. The default is every 1 minute.
-  # scrape_timeout is set to the global default (10s).
-
-scrape_configs:
-----
-. Review the template for deployment of Prometheus at `openshift/prometheus/prometheus-template.yaml`.
-* The template defines a route, a service and a deployment API object. The route allows access to the Prometheus UI web application.
+. Review the `openshift/prometheus/prometheus-template.yaml` OpenShift template file. The template defines the route, service and deployment for Prometheus.
 * By default, the Prometheus UI web application is exposed over port 9090.
 * The Prometheus image runs under the prometheus service account.
 * The Prometheus metric data are stored on temporary storage on the pod’s node.
 * The data retention time is set to 6 hours.
 * The prometheus configmap is mounted inside the Prometheus pod in the etc/prometheus directory.
-. Deploy Prometheus.
+. Review the `openshift/prometheus/prometheus.yaml` Prometheus configuration file, and the `openshift/prometheus/kafka.rules` and `openshift/prometheus/dispatch-service.rules` Prometheus rule files.
+* The `prometheus.yaml` configuration file defines the scrape jobs for prometheus. It defines scrape jobs for kafka, the dispatch service and prometheus-sql.
+** For a detailed overview of the Prometheus configuration settings, refer to the https://prometheus.io/docs/prometheus/latest/configuration/configuration/[Prometheus configuration documentation]
+** `scrape_configs` contains the configuration settings for the scraping jobs.
+** There are three scraping jobs, with type `kubernetes_sd_configs`.
+** Kubernetes SD configurations allow retrieving scrape targets from the Kubernetes REST API and always staying synchronized with the cluster state.
+** A Kubernetes SD configuration has a role type to discover targets. Supported role types include node, pod, service, endpoint, ingress. The role type for the kafka job is endpoint. The endpoints role discovers targets from listed endpoints of a service. For each endpoint address one target is discovered per port.
+** The `namespaces` configuration allows to restrict the discovery of targets to a specified set of namespaces. For the `kafka` scraping job, the discovery is limited to the namespace of the Kafka broker.
+** `relabel_configs`: Relabeling is a powerful tool to dynamically rewrite the label set of a target before it gets scraped. Please refer to the Prometheus documentation for full details. +
+* The `kafka.rules` rules file has some examples for pre-computed metrics for Kafka. The rules calculate the rate per minute at which messages are added to each of the Kafka topics, as well as the total amount of memory and cpu consumed by the kafka cluster pods.
+* The `dispatch-service.rules` rules file contains pre-computed metrics based on data collected from the Dispatch service and the database.
+. Change directory to the `ansible` folder. Run the `prometheus.yml` playbook.
 +
 ----
-$ oc apply -f openshift/prometheus/prometheus-template.yaml -n $TOOLS_PRJ
+$ cd ansible
+$ ansible-playbook playbooks/prometheus.yml
 ----
+. Expect the playbook to run to completion without failures.
 . Get the URL for the `prometheus` route:
 +
 ----
@@ -2071,131 +2061,25 @@ $ echo "http://$(oc get route prometheus -o jsonpath='{.spec.host}' -n $TOOLS_PR
 . In a browser window, navigate to the URL of the `prometheus` route. Expect to see the Prometheus UI landing page:
 +
 image::images/prometheus_landing_page.png[]
+. In the Prometheus UI, navigate to _Status -> Targets_. Expect to see the scrape targets as defined in the Prometheus configuration file. Notice that only the `Kafka` target is up. There are six endpoints discovered - corresponding to the three Zookeeper pods and the three Kafka broker pods.
++
+image::images/prometheus_kafka_target.png[]
+. In the Prometheus UI, navigate to _Status -> Rules_. Expect to see the Prometheus rules as defined in the `dispatch-service.rules` and `kafka.rules` Prometheus rule files.
++
+image::images/prometheus_rules.png[]
+. In the Prometheus UI, navigate to the landing page, and open the metrics drop-down to see an overview of the metrics exposed by the Kafka and Zookeeper pods. Note that the metrics defined in the rule file appear as well in the list.
++
+image::images/prometheus_kafka_metrics.png[]
+. Prometheus has rudimentary metric plotting functionality. As an example, select the `kafka_pods_total_memory_used` metric from the metrics drop-down list. Click _Execute_ to display the metric values.
++
+image::images/prometheus_kafka_metrics_values.png[]
+. Click on the _Graph_ tab to see a graphical representation of the metric data.
++
+image::images/prometheus_kafka_metrics_graph.png[]
++
+Later in the lab, we will use Grafana to build a dahboard out of the metrics collected by Prometheus.
 
-=== Monitor the EnMasse broker
-
-. The EnMasse broker exposes Prometheus metrics at port 8080.
-+
-image::images/enmasse_prometheus_port.png[]
-+
-In the OpenShift console, navigate to the EnMasse broker pod, click on the `Terminal` tab and type `curl localhost:8080`. Expect to see the metrics exposed by the EnMasse broker in Prometheus format:
-+
-image::images/enmasse_prometheus_metrics.png[]
-. Define a scrape job on Prometheus to scrape the EnMasse broker metrics. +
-Open the `openshift/prometheus/prometheus.yaml` file in the `installation` project of the lab material in a text editor. Add the following contents to the file. Replace `<enmasse project>` with the name of OpenShift project where you deployed EnMasse.
-+
-----
-- job_name: 'enmasse'
-  kubernetes_sd_configs:
-  - role: pod
-    namespaces:
-      names:
-      - <enmasse project>
-
-  relabel_configs:
-  - source_labels: [__meta_kubernetes_pod_container_port_name]
-    action: keep
-    regex: artemismetrics.*
-  - source_labels: [__meta_kubernetes_pod_name]
-    action: replace
-    target_label: kubernetes_pod_name
-  - source_labels: [__meta_kubernetes_namespace]
-    action: replace
-    target_label: kubernetes_namespace
-----
-+
-At this point, the prometheus configuration file should look like:
-+
-----
-rule_files:
-  - '*.rules'
-
-# global config
-global:
-  scrape_interval:     30s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
-  evaluation_interval: 30s # Evaluate rules every 15 seconds. The default is every 1 minute.
-  # scrape_timeout is set to the global default (10s).
-
-scrape_configs:
-- job_name: 'enmasse'
-  kubernetes_sd_configs:
-  - role: pod
-    namespaces:
-      names:
-      - enmasse-bt
-
-  relabel_configs:
-  - source_labels: [__meta_kubernetes_pod_container_port_name]
-    action: keep
-    regex: artemismetrics.*
-  - source_labels: [__meta_kubernetes_pod_name]
-    action: replace
-    target_label: kubernetes_pod_name
-  - source_labels: [__meta_kubernetes_namespace]
-    action: replace
-    target_label: kubernetes_namespace
-----
-+
-* For a detailed overview of the Prometheus configuration settings, refer to the https://prometheus.io/docs/prometheus/latest/configuration/configuration/[Prometheus configuration documentation]
-* `scrape_configs` contains the configuration settings for the scraping jobs.
-* There is one scraping job named `enmasse` with type `kubernetes_sd_configs`.
-* Kubernetes SD configurations allow retrieving scrape targets from the Kubernetes REST API and always staying synchronized with the cluster state.
-* A Kubernetes SD configuration has a role type to discover targets. Supported role types include node, pod, service, endpoint, ingress. The role type for the enmasse job is pod. The pod role discovers all pods and exposes their containers as targets. For each declared port of a container, a single target is generated.
-* The `namespaces` configuration allows to restrict the discovery of targets to a specified set of namespaces. For the `enmasse` scraping job, the discovery is limited to the namespace of the Enmasse broker.
-* `relabel_configs`: Relabeling is a powerful tool to dynamically rewrite the label set of a target before it gets scraped. Multiple relabeling steps can be configured per scrape configuration. They are applied to the label set of each target in order of their appearance in the configuration file. Please refer to the Prometheus documentation for full details. +
-In short, the settings for the `enmasse` scraping job configure the job as follows:
-** Only the `artemismetrics` port is scraped
-** The `kubernetes_namespace` label is set to the value of the Kubernetes namespace of the discovered target. Labels help to select and filter metrics when building dashboards.
-** The `kubernetes_pod_name` label is set to the name of the Enmasse broker pod.
-. Replace the `prometheus` configmap with the modified file:
-+
-----
-$ oc delete configmap prometheus -n $TOOLS_PRJ
-$ oc create configmap prometheus --from-file=openshift/prometheus/prometheus.yaml -n $TOOLS_PRJ
-----
-. Scale the Prometheus pod up and down to force a restart of the Prometheus pod:
-+
-----
-$ oc scale deployment prometheus --replicas=0 -n $TOOLS_PRJ && oc scale deployment prometheus --replicas=1 -n $TOOLS_PRJ
-----
-. In a browser window, navigate to the Prometheus UI. Go to `Status -> Targets`. Expect to see the EnMasse target:
-+
-image::images/prometheus_target.png[]
-. On the Prometheus landing page, open the metric drop-down box to see an overview of the metrics exposed by the EnMasse broker:
-+
-image::images/prometheus_metrics.png[]
-. Select the `artemis_consumer_count metric`. Click on 	`Execute`. Expect to see the number of consumers per topic:
-+
-image::images/prometheus_metrics_2.png[]
-+
-Click on the `Graph` tab to see a graphical representation of the metrics:
-+
-image::images/prometheus_metrics_3.png[]
-. Select the `artemis_message_count` metric. This metric returns the number of messages in a topic or queue that are not delivered to a consumer. The expected value is 0 for all the topics:
-+
-image::images/prometheus_metrics_4.png[]
-. To see the metrics in action, scale down the dispatch service to 0 replicas:
-+
-----
-$ oc scale dc dispatch-service --replicas=0 -n $SERVICES_PRJ
-----
-. Wait until the dispatch service pod is terminated, and put some load on the system:
-+
-----
-$ curl -X POST -H "Content-type: application/json" -d '{"messages": 100, "type": 0}' $PASSENGER_SERVICE_URL/simulate
-----
-. Observe the `artemis_message_count` metrics graph on the Prometheus console. The message count for the `topic-ride-event` topic goes up to 100:
-+
-image::images/prometheus_graph.png[]
-. Scale up the dispatch service to 1 replica:
-+
-----
-$ oc scale dc dispatch-service --replicas=1 -n $SERVICES_PRJ
-----
-+
-Observe how the message count for the `topic-ride-event` topic drops back to 0.
-
-=== Monitor the dispatch service
+=== Instrumenting the dispatch service
 
 Micrometer (https://micrometer.io/) is a monitoring library which provides a simple facade over the instrumentation clients for the most popular monitoring systems, allowing you to instrument your JVM-based application code without vendor lock-in. Think SLF4J, but for metrics. As the default monitoring and instrumenting library for Spring Boot (since version 2.0), it is rapidly gaining popularity in the community.
 
