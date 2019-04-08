@@ -2207,146 +2207,97 @@ image::images/prometheus_dispatch_service_graph_2.png[]
 
 https://github.com/chop-dbhi/prometheus-sql[Prometheus SQL] is a service that generates basic metrics for SQL result sets and exposes them as Prometheus metrics. It executes SQL queries at a regular interval and exposes the resultset as Prometheus compatible time series metrics.
 
-In this section of the lab, we leverage Prometheus SQL to measure the number of `Ride` entities per status over a sliding time window, as well as the rate of process instances created.
+In this section of the lab, we leverage Prometheus SQL to measure the number of `Ride` entities reated per status over a sliding time window, as well as the rate of process instances created.
+
+NOTE: The next release of RHPAM will expose out-of-the-box Prometheus compatible metrics. This will make the need for somethng like Prometheus SQL obsolete.
 
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-. Review the Prometheus SQL configuration file at `openshift/prometheus-sql/prometheus-sql.yml`. The configuration defines the database(s) to connect to:
-+
-----
-defaults:
-  data-source: datasource
-  query-interval: 30s
-  query-timeout: 5s
-  query-value-on-error: -1
-
-# Defined data sources
-data-sources:
-  datasource:
-    driver: postgresql
-    properties:
-      host: dispatch-service-postgresql
-      port: 5432
-      user: jboss
-      password: jboss
-      database: rhpam
-      sslmode: disable
-----
-. The queries to execute are defined in the `openshift/prometheus-sql/queries.yml` file:
-+
-----
-- ride_per_status:
-    sql: >
-        SELECT status, count(id) as cnt FROM ride GROUP BY status
-    data-field: cnt
-- ride_created:
-    sql: >
-        SELECT processname, count(1) as cnt FROM processinstancelog GROUP BY processname
-    data-field: cnt
-----
-* `data-field` defines which column to expose as metrics.
-* The Prometheus metrics are prefixed with `query_result_`.
-. Create the configmap in the services project on OpenShift:
-+
-----
-$ oc create configmap prometheus-sql-config --from-file=openshift/prometheus-sql/prometheus-sql.yml --from-file=openshift/prometheus-sql/queries.yml -n $SERVICES_PRJ
-----
 . Review the Prometheus SQL template at `openshift/prometheus-sql/prometheus-sql-template.yaml`.
-. Deploy the Prometheus SQL image in the services project:
+. Change directory to the `ansible` folder. Run the `prometheus_sql.yml` playbook.
 +
 ----
-$ oc create -f openshift/prometheus-sql/prometheus-sql-template.yaml -n $SERVICES_PRJ
+$ cd ansible
+$ ansible-playbook playbooks/prometheus_sql.yml
 ----
-. Check the logs of the `prometheussql` pod. Expect to see something like:
+. Expect the playbook to run to completion without failures.
+. The playbook deploys the Prometheus SQL pod in the tools project. Prometheus SQL is configured using a configmap. Review the contents of the `prometheus-sql-config` configmap in the tools project:
 +
 ----
-2018/09/02 07:56:56 prometheus-sql starting up...
-2018/09/02 07:56:56 Load config from file [/config/prometheus-sql.yml]
-2018/09/02 07:56:56 Load queries from file [/config/queries.yml]
-2018/09/02 07:56:56 * Listening on 0.0.0.0:8080...
-[ride_per_status] 2018/09/02 07:56:56 Fetch took 27.982118ms
-Creating ride_per_status{"status":6}
-Creating ride_per_status{"status":7}
-Creating ride_per_status{"status":4}
-Registering metric ride_per_status{"status":4}
-Registering metric ride_per_status{"status":7}
-Registering metric ride_per_status{"status":6}
-[ride_created] 2018/09/02 07:56:56 Fetch took 30.410054ms
-Creating ride_created{"processname":"dispatch-process"}
-Registering metric ride_created{"processname":"dispatch-process"}
-[ride_per_status] 2018/09/02 07:57:26 Fetch took 788.363µs
-[ride_created] 2018/09/02 07:57:26 Fetch took 2.983659ms
+$ oc get configmap prometheus-sql-config -o yaml -n $TOOLS_PRJ
 ----
++
+----
+apiVersion: v1
+data:
+  prometheus-sql.yml: |
+    # Show all possible defaults keys
+    defaults:
+      data-source: datasource
+      query-interval: 10s
+      query-timeout: 5s
+      query-value-on-error: -1
 
-. Define a scrape job on Prometheus to scrape the SQL metrics. Open the `openshift/prometheus/prometheus.yaml` file in the `installation` project of the lab material in a text editor. Add the following contents to the end of the file. Replace `<services project>` with the name of OpenShift project where you deployed the dispatch service.
-+
+    # Defined data sources
+    data-sources:
+      datasource:
+        driver: postgresql
+        properties:
+          host: dispatch-service-postgresql.ride-msa-services-user1.svc
+          port: 5432
+          user: jboss
+          password: jboss
+          database: rhpam
+          sslmode: disable
+  queries.yml: |-
+    - ride_per_status:
+        sql: >
+            SELECT status, count(id) as cnt FROM ride GROUP BY status
+        data-field: cnt
+    - ride_created:
+        sql: >
+            SELECT processname, count(1) as cnt FROM processinstancelog GROUP BY processname
+        data-field: cnt
+kind: ConfigMap
+metadata:
+...
 ----
-- job_name: 'dispatch-service-pgsql'
-  kubernetes_sd_configs:
-  - role: service
-    namespaces:
-      names:
-      - services-bt
+* The database connection properties are defined in `prometheus-sql.yml`.
+* The queries to execute are defined in `queries.yml`.
+** `data-field` defines which column to expose as metrics.
+** The Prometheus metrics are prefixed with `query_result_`.
+. Check the logs of the `prometheussql` pod in the tools project. Expect to see something like:
++
+image::images/prometheussql_logs.png[]
 
-  relabel_configs:
-  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_probe]
-    action: keep
-    regex: true
-  - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
-    action: replace
-    target_label: __metrics_path__
-    regex: (.+)
-  - source_labels: [__meta_kubernetes_namespace]
-    action: replace
-    target_label: kubernetes_namespace
-  - source_labels: [__meta_kubernetes_service_name]
-    action: replace
-    target_label: kubernetes_name
-----
-. Prometheus uses rule files to configure recording rules. Recording rules allow to precompute frequently needed or computationally expensive expressions and save their result as a new set of time series. Querying the precomputed result will then often be much faster than executing the original expression every time it is needed.
-* As an example, let’s say you want to monitor the per-second rate of creation of dispatch process instances , as measured over the last 5 minutes. Using the Prometheus PromQL syntax, this can be expressed as:
+. In a browser window, navigate to the Prometheus UI. Go to _Status -> Targets_. Expect to see that the dispatch service target has been discovered:
 +
-----
-rate(query_result_ride_created{processname="dispatch-process"}[5m])
-----
-* Review the recording rules file at `openshift/prometheus/dispatch-service-sql.rules`:
+image::images/prometheus_prometheussql_target.png[]
+
+. As part of the `dispatch-service.sql` Prometheus rule file, some pre-computed Prometheus metrics were defined based on the metrics exposed by Prometheus SQL:
 +
 ----
 groups:
 - name: dispatch_service_ride_status
   rules:
   - record: ride:requested:rate5m
-    expr: rate(query_result_ride_per_state{state="1"}[5m])
+    expr: rate(query_result_ride_per_status{status="1"}[5m])
   - record: ride:assigned:rate5m
-    expr: rate(query_result_ride_per_state{state="2"}[5m])
+    expr: rate(query_result_ride_per_status{status="2"}[5m])
   - record: ride:canceled:rate5m
-    expr: rate(query_result_ride_per_state{state="4"}[5m])
+    expr: rate(query_result_ride_per_status{status="4"}[5m])
   - record: ride:started:rate5m
-    expr: rate(query_result_ride_per_state{state="5"}[5m])
+    expr: rate(query_result_ride_per_status{status="5"}[5m])
   - record: ride:ended:rate5m
-    expr: rate(query_result_ride_per_state{state="6"}[5m])
+    expr: rate(query_result_ride_per_status{status="6"}[5m])
   - record: ride:expired:rate5m
-    expr: rate(query_result_ride_per_state{state="7"}[5m])
+    expr: rate(query_result_ride_per_status{status="7"}[5m])
   - record: ride:created:rate5m
     expr: rate(query_result_ride_created{processname="dispatch-process"}[5m])
 ----
-. Replace the `prometheus` configmap with the modified `prometheus.yaml` and the `dispatch-service.rules` and `dispatch-service-sql.rules` files:
-+
-----
-$ oc delete configmap prometheus -n $TOOLS_PRJ
-$ oc create configmap prometheus --from-file=openshift/prometheus/prometheus.yaml --from-file=openshift/prometheus/dispatch-service.rules --from-file=openshift/prometheus/dispatch-service-sql.rules -n $TOOLS_PRJ
-----
-. Scale the Prometheus pod up and down to force a restart of the Prometheus pod:
-+
-----
-$ oc scale deployment prometheus --replicas=0 -n $TOOLS_PRJ && oc scale deployment prometheus --replicas=1 -n $TOOLS_PRJ
-----
-. In a browser window, navigate to the Prometheus UI. Go to `Status -> Targets`. Expect to see the `dispatch-service-pgsql` target:
-+
-image::images/prometheus_target_2.png[]
-. In the Prometheus UI, navigate to `Status -> Rules`. Expect to see the rules defined in the `dispatch-service-sql.rules` file:
-+
-image::images/prometheus_rules.png[]
-. In the Rules view click on one of the rules, for example `ride:created:5m`. The rule expression is copied into the metric box in the landing page and executed.
+* The `ride:<status>:rate5m` metrics calculate the per-second rate of `ride` entities per status in the database over the last 5 minutes.
+* The `ride:created:rate5m` metric calculates the per-second rate of `dispatch-process` process instances created in the database over the last 5 minutes.
+
+. In the Prometheus UI, navigate to _Status -> Rules_. In the Rules view, navigate to the `dispatch_service_ride_status` section, and click on the `ride:created:rate5m` rule. The rule expression is copied into the metric box in the landing page and executed.
 +
 image::images/prometheus_metrics_5.png[]
 . Put some load on the system:
