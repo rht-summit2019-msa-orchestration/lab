@@ -677,7 +677,7 @@ Just as with the Kafka cluster, you use Ansible playbooks to install these tools
 
 The Ansible playbook installs the Gogs server, including creating the admin user (`gogsadmin/admin123`), developer user (`developer/developer123`) and organization (`acme`).
 
-. Make sure you are logged with the `oc` client into your OpenShift environment.
+. Make sure you are logged in with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
 . Change directory to the `ansible` folder. Run the `gogs.yml` playbook.
 +
@@ -706,7 +706,7 @@ image::images/gogs_landing_page_organization.png[]
 
 We use an image from https://www.crunchydata.com[CrunchyData], a US based company offering services around enterprise deployments of PostgreSQL.
 
-. Make sure you are logged with the `oc` client into your OpenShift environment.
+. Make sure you are logged in with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
 . Change directory to the `ansible` folder. Run the `pgadmin4.yml` playbook.
 +
@@ -732,7 +732,7 @@ The standard Jenkins instance on OpenShift is configured with two build pods, `n
 The default Maven build pod has no persistent storage for the local repository. So for every build, all the build and runtime dependencies need to be downloaded all over again. In this lab we are going to configure a custom Maven build pod which has a persistent volume mount to store the local Maven repo. This will drastically improve the build time - except for the first run, which still needs to download all required artifacts. +
 Slave build pods can be configured as part of the build pipeline script, or with a configmap. This latter is used in this lab.
 
-. Make sure you are logged with the `oc` client into your OpenShift environment.
+. Make sure you are logged in with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
 . Review the `openshift/jenkins/jenkins-maven-slave-configmap.yaml` configmap definition.
 +
@@ -996,7 +996,7 @@ In this lab, you use an Ansible playbook to install the different Openshift reso
 Feel free to review these resources. They are located in the `openshift/driver-service` folder of the `installation` project. The configmap template can be found in the `ansible/roles/openshift_driver_service/templates` folder.
 
 
-. Make sure you are logged with the `oc` client into your OpenShift environment.
+. Make sure you are logged in with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
 . Change to the `ansible` directory, and run the `driver_service.yml` playbook.
 +
@@ -1086,7 +1086,7 @@ exec java -Dapplication.configmap=driver-service -Dvertx.logger-delegate-factory
 
 The procedure is equivalent to the driver service.
 
-. Make sure you are logged with the `oc` client into your OpenShift environment.
+. Make sure you are logged in with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
 . Change to the `ansible` directory, and run the `passenger_service.yml` playbook.
 +
@@ -1199,7 +1199,7 @@ Another aspect which is specific for the Dispatch service, is the fact that it d
 To keep things simple, we build the kjar as part of the Dispatch service build pipeline. In a more real-life setup, the kjar would have its own build pipeline which publishes the kjar into a repository, from where the dispatch service build pipeline would download it and add to its dependencies.
 
 
-. Make sure you are logged with the `oc` client into your OpenShift environment.
+. Make sure you are logged in with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
 . Change to the `ansible` directory, and run the `dispatch_service.yml` playbook.
 +
@@ -2027,7 +2027,7 @@ On OpenShift/Kubernetes, the discovery mechanism of Prometheus uses the Kubernet
 
 {empty} +
 
-. Make sure you are logged with the `oc` client into your OpenShift environment.
+. Make sure you are logged in with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
 . Review the `openshift/prometheus/prometheus-template.yaml` OpenShift template file. The template defines the route, service and deployment for Prometheus.
 * By default, the Prometheus UI web application is exposed over port 9090.
@@ -2311,32 +2311,35 @@ image::images/prometheus_graph_3.png[]
 
 === Grafana
 
-The Prometheus UI capabilities to visualize metrics data are quite limited, that’s why Prometheus is often used in combination with Grafana to create dashboards.
+The Prometheus UI capabilities to visualize metrics data are quite limited, that’s why Grafana is often used in combination with Prometheus to create dashboards.
 
-In this section of the lab you deploy Grafana to OpenShift and create some dashboards based on metrics collected by Prometheus.
+In this section of the lab you deploy Grafana to OpenShift and create a dashboard based on metrics collected by Prometheus.
 
+We use an Ansible playbook to install Grafana on OpenShift.
+The playbook:
+
+* Creates a service account for Grafana.
+* Creates a configmap with the Grafana configuration file.
+* Deploys Grafana on the Openhift cluster using a template.
+* Creates a datasource for Prometheus on Grafana.
+
+{empty} +
+
+. Make sure you are logged in with the `oc` client into your OpenShift environment.
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
-. Create a service account for Grafana in the tools project
-+
-----
-$ oc create sa grafana -n $TOOLS_PRJ
-----
-. The `openshift/grafana` directory of the lab source material contains a Grafana configuration file named `defaults.ini`. Create a configmap from this file:
-+
-----
-$ oc create configmap grafana-config --from-file=openshift/grafana/defaults.ini -n $TOOLS_PRJ
-----
 . Review the `openshift/grafana/grafana.yaml` template for Grafana.
 * The template defines a route, a service and a deployment API object.
 * By default, the Grafana UI web application is bound to port 3000.
 * The Grafana image runs under the grafana service account.
 * The Grafana data is stored on temporary storage on the pod’s node.
-* The `grafana-config` configmap is mounted inside the Grafana pod in the `/root/go/src/github.com/grafana/grafana/conf` directory.
-. Deploy Grafana to your OpenShift environment:
+* The `grafana-config` configmap is mounted inside the Grafana pod in the `/usr/share/grafana/conf` directory.
+. Change directory to the `ansible` folder. Run the `grafana.yml` playbook.
 +
 ----
-$ oc process -f openshift/grafana/grafana.yaml | oc create -f - -n $TOOLS_PRJ
+$ cd ansible
+$ ansible-playbook playbooks/grafana.yml
 ----
+. Expect the playbook to run to completion without failures.
 . Get the URL for the Grafana route:
 +
 ----
@@ -2345,41 +2348,53 @@ $ echo "http://$(oc get route grafana -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
 . In a web browser, navigate to the URL of the Grafana route. Expect to see the Grafana Homepage.
 +
 image::images/grafana_landing_page.png[]
-. Click on `Add data source` to configure a data source for Prometheus. On the `Add data source` page:
-* Use `prometheus` as data source name.
-* Choose `Prometheus` as data source type.
-* The url should correspond to the Prometheus service URL, `http://prometheus:9090`.
-* Leave the other settings as is.
-* Click `add`. Expect to see a message that the data source is working. If not, verify and correct your input values.
-* Back on the Grafana home page, click on `New dashboard` to create a dashboard. Click on the graph icon. Expect to see an empty graph.
+. On the Grafana home page, click on _New dashboard_ to create a dashboard. On the _New Panel_ window, click on _Add Query_.
 +
-image::images/grafana_graph.png[]
-. Click on the `Panel title` link, and then on the `Edit` link. Expect the Graph edit page to appear:
+image::images/grafana_new_panel.png[]
 +
-image::images/grafana_graph_1.png[]
-. On the `Metrics` tab, enter the query for the data. For example, to plot then number of messages in the EnMasse topics, enter `artemis_message_count{address="topic-driver-command"}`. Note that Grafana auto-suggests the metric names obtained from Prometheus. Set the `Legend format` to `topic-driver-command`.
+image::images/grafana_new_panel_2.png[]
+. In the _Queries to_ drop down box, select `Prometheus`. In the query selection area, enter `kafka_pods_max_memory_used`. In the _Legend_ text box, enter `{{pod_name}}`.
 +
-image::images/grafana_graph_2.png[]
+image::images/grafana_panel_kafka_memory_used.png[]
+. Click on the _General_ icon on the left, and set the Panel title to `Kafka Memory Used`. Click on the panel title and select _edit_ to switch to the dashboard view.
 +
-Repeat for the other topics.
+image::images/grafana_panel_kafka_memory_used_edit.png[]
 +
-image::images/grafana_graph_3.png[]
-. Give a title to the graph in the `General` pane, and close the edit section.
-. Create dashboard panes for metrics you are interested in. Suggested metrics are: the number of active connections in the datasource pools of the dispatch service (metrics start with `xa_connections` and `nonXa_connections`), JVM CPU and memory consumption for the dispatch service, the execution time for the processing of messages in the dispatch service, and the SQL metrics obtained from the dispatch service database.
+image::images/grafana_panel_kafka_memory_used_view.png[]
+. Click on the _Add panel_ button on the top right to add a new dashboard panel.
+* Select the `Prometheus` data source.
+* Use the Prometheus `kafka_pods_cpu_used` metric.
+* Set the legend to `{{pod_name}}`.
+* Set the panel title to `Kafka CPU Used`
 +
-image::images/grafana_graph_4.png[]
-. Put some load on the system to generate data for the dashboard. If you have SoapUI installed on you system, the `soapui` project in the lab material has a SoapUI load test project.
-* If needed, download and install SoapUI from https://www.soapui.org.
-* Launch SoapUI, and open the project `acme-ride-soapui-project.xml` in the soapui project of the lab material.
+image::images/grafana_panel_kafka_cpu_used.png[]
++
+* Switch to the dashboard view. Move the second panel next to the first one. The dashboard should look like:
++
+image::images/grafana_dashboard.png[]
+. Add a panel to plot the rate at which messages are sent to each Kafka topic.
+* Use the `topic_ride_event:messages_in:rate1m`, `topic_driver_event:messages_in:rate1m`, `topic_passenger_event:messages_in:rate1m`, `topic_driver_command:messages_in:rate1m`, `topic_pssenger_command:messages_in:rate1m` metrics.
++
+image::images/grafana_panel_kafka_messages_in.png[]
+. Create additional dashboard panels for the metrics you are interested in. Suggested metrics are:
+* Number of active connections in the datasource pools of the dispatch service.
+** Metrics: `jdbc_connections_max` and `jdbc_connections_active`.
+* Dispatch service memory and cpu consumption.
+** Metrics: `jvm:heap:used`, `system_cpu_usage`.
+* Process instances created per minute.
+** Metrics: `ride:created:rate5m`.
+. Arrange the dashboard panes and adjust the time interval to your liking.
+. Put some load on the system to generate data for the dashboard. The `soapui` project in the lab material has a SoapUI load test project. SoapUI is installed on the lab laptop.
+* Launch SoapUI, and open the project `acme-ride-soapui-project.xml` in the `soapui` project of the lab material.
 * In the custom properties of the SoapUI project, set the value of the `OpenShiftEndpoint` property to the route URL of the passenger service application in OpenShift.
 +
 image::images/soapui_properties.png[]
-* In the Soapui project, navigate to the `LoadTest 1` load test. Open the load test and click on the green arrow icon to launch the test. This will generate approx 3 `RideRequestedEvent` messages per second during 5 minutes
+* In the Soapui project, navigate to the `LoadTest 1` load test. Open the load test and click on the green arrow icon to launch the test. The load test will generate approx 3 `RideRequestedEvent` messages per second during 5 minutes
 +
 image::images/soapui_load_test.png[]
 . Observe the Grafana console:
 +
-image::images/grafana_graph_5.png[]
+image::images/grafana_dashboard_1.png[]
 
 
 Congratulations! You made it to the end of the lab.
