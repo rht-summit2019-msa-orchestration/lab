@@ -159,10 +159,10 @@ NOTE: We highly encourage you to review the source code of the different service
 The orchestration logic in the Dispatch service is implemented as a BPMN2 process. From a functional point of view, the orchestration is as follows:
 
 * The Dispatch service receives a _RideRequestedEvent_ message from the _topic-ride-event_ topic.
-* A _DispatchDriverCommand_ is sent to the _topic-driver-command_ topic.
-* The service waits for a _DriverDispatchedEvent_ from the _topic-driver-event_ topic.
-* If a _DriverDispatchedEvent_ is not received within 5 minutes, the state of the Ride is set to _expired_. A _RideExpiredEvent_ is sent to the _topic-ride-event_ queue.
-* As long as the ride did not start, the passenger can cancel the ride. The service waits on a _RideCanceledEvent_ from the _topic-ride-event_ topic, or a _RideStartedEvent_ form the _driver-event-topic_, whichever comes first.
+* A _AssignDriverCommand_ is sent to the _topic-driver-command_ topic.
+* The service waits for a _DriverAssignedEvent_ from the _topic-driver-event_ topic.
+* If a _DriverAssignedEvent_ is not received within 5 minutes, the state of the Ride is set to _expired_. A _RideExpiredEvent_ is sent to the _topic-ride-event_ queue.
+* As long as the ride did not start, the passenger can cancel the ride. The service waits on a _RideCanceledEvent_ from the _topic-ride-event_ topic, or a _RideStartedEvent_ from the _driver-event-topic_, whichever comes first.
 * If a _RideCanceledEvent_ is received, the status of the ride is set to _canceled_. +
 The passenger will have to pay a penalty (this part is not implemented)
 * If a _RideStartedEvent_ is received, the status of the ride is set to
@@ -178,14 +178,9 @@ The process diagram looks like:
 
 image::images/dispatch_process_2.png[]
 
-* _Signal_ event nodes are used to model the fact that the process is waiting for a certain type of message. When the service receives a message, it finds the relevant process instance, and signals the process. +
-From a conceptual view it would have been more logical to use BPMN _Message_ event nodes rather than signal nodes. However, Message event nodes are broken in the current version of RHPAM (will be fixed in the next release).
+* _Signal_ event nodes are used to model the fact that the process is waiting for a certain type of message. When the service receives a message, it finds the relevant process instance, and signals the process.
 * Signal nodes are wait states, so at each signal the state of the process instance is saved in the database.
-* The data model for the process is very simple: the process instance only keeps track of the _rideId_ and the _traceId_ for the ride. The _assign_driver_expire_duration_ process variable is the delay after which the timer fires.
-+
-image::images/dispatch_process_variables.png[]
-+
-image::images/dispatch_process_timer_2.png[]
+* The data model for the process is very simple: the process instance only keeps track of the _rideId_ for the ride Entity.
 * The process uses two custom _WorkItemHandlers_.
 ** The _Assign Driver_ and _Handle Payment_ nodes use the _SendMessage_ WorkItemHandler. The implementation sends a message of specified type to the specified destination.
 +
@@ -198,300 +193,9 @@ image::images/dispatch_process_update_ride_2.png[]
 +
 image::images/dispatch_process_update_ride_data_io.png[]
 
-=== Data model
-
-The state of a Ride is captured in the `Ride` entity.
-
-----
-@Entity
-@SequenceGenerator(name="RideSeq", sequenceName="RIDE_SEQ")
-@Table(name = "Ride")
-public class Ride {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO, generator="RideSeq")
-    private long id;
-
-    private String rideId;
-
-    private String pickup;
-
-    private String destination;
-
-    private int status;
-
-    private BigDecimal price;
-
-    private String passengerId;
-
-    private String driverId;
-
-    //getter and setters
-    [...]
-----
-
-The `Ride` entity is stored in the RHPAM database (this is done is this lab to keep things simple). The `Ride` entity is added to the list of persistent classes in `META-INF/jbpm-persistence.xml`.
-
-The `com.acme.ride.dispatch.dao.RideDao` class handles `Ride` entity CRUD operations.
-
-The `rideId` property is used as correlation key when starting an instance of the dispatch service process.
-
 === RHPAM engine embedded in Spring Boot application
 
-Setting up the embedded RHPAM engine requires to pay attention to a number of components required for the correct functioning of the engine.
-
-* JTA Transaction manager.
-** The transaction manager used is _Narayana_, the transaction manager from WildFly and EAP.
-** The Snowdrop project, the upstream of the RHOAR Spring Boot engineering efforts, has an alternative Narayana Spring Boot starter which does supports connection pools with Apache DPCP2.
-** The Narayana transaction manager configuration properties are prefixed with `narayana`.
-+
-----
-narayana.transaction-manager-id=1
-narayana.default-timeout=120
-----
-+
-Note that for correct transaction recovery behavior, each Narayana transaction manager instance must be started with a unique id. Also, the transaction logs should be written to a persistent data volume. These functionalities have not been implemented for this lab.
-+
-** The Narayana DBCP2 pool configuration properties are prefixed with `narayana.dbcp`:
-+
-----
-narayana.dbcp.enabled=true
-narayana.dbcp.defaultAutoCommit=false
-----
-+
-----
-narayana.dbcp.maxTotal=20
-----
-
-* Datasources:
-** The RHPAM engine uses a JTA managed XA datasource. When using Quartz to hande persistent timers, you also need to provide a non-managed datasource for Quartz.
-** The managed and the unmanaged datasources use a datasource connection pool powered by the Apache DBCP2 library.
-** The datasources are configured in the `com.acme.ride.dispatch.DataSourceConfiguration` class.
-** The datasource configuration properties are prefixed with `spring.datasource`:
-+
-----
-spring.datasource.username=jboss
-spring.datasource.password=jboss
-spring.datasource.url=jdbc:postgresql://${postgresql.host}:5432/rhpam
-----
-** The datasource connection pool configuration properties for the unmaged datasource are prefixed with `spring.datasource.dbcp2`
-+
-----
-spring.datasource.dbcp2.default-auto-commit=false
-spring.datasource.dbcp2.max-total=5
-spring.datasource.dbcp2.max-idle=5
-----
-
-* JPA
-** The RHPAM engine uses JPA for everything persistence related. The JPA provider is Hibernate.
-** The Spring beans for JTA - `EntityManagerFactory, PersistenceUnitManager, JpaVendorAdapter` - are configured in the `com.acme.ride.dispatch.JpaConfiguration` class.
-** Hibernate configuration properties are prefixed with `spring.jpa.properties.hibernate`:
-+
-----
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-spring.jpa.properties.hibernate.transaction.jta.platform=org.hibernate.service.jta.platform.internal.JBossStandAloneJtaPlatform
-spring.jpa.properties.hibernate.id.new_generator_mappings=false
-spring.jpa.properties.hibernate.hbm2ddl.auto=validate
-spring.jpa.properties.hibernate.show_sql=false
-spring.jpa.properties.hibernate.connection.release_mode=after_statement
-----
-
-* Quartz
-** By default the RHPAM engine uses a `java.util.concurrent.ScheduledThreadPoolExecutor` to schedule timers and jobs, which will not survive an application restart. To use persistent timers, EJB Timers can be used in a JEE environment. In a non JEE environment, Quartz should be used.
-** The Quartz scheduler is automatically created by the RHPAM engine if a application property `jbpm.quartz.enabled` is set `true`. Quartz configuration file needs to be provided - see the `jbpm-quartz.properties` file in the `etc` folder of the source code for the quartz properties file used. Additionally to use database as job store application property `jbpm.quartz.db` needs to be set to true.
-
-
-* RHPAM engine
-
-* JMS: the JMS layer is configured is the same way as in the passenger service. Details can be found in the next paragraph.
-** The JMS Messaglisteners `DriverAssignedEventMessageListener`, `PassengerCanceledEventMessageListener` and `RideEventsMessageListener` interact with the RHPAM engine through the jBPM services API. This interaction occurs in a transactional context, managed by Spring's `TransactionTemplate`.
-+
-----
-    TransactionTemplate template = new TransactionTemplate(transactionManager);
-    template.execute((TransactionStatus s) -> {
-        [...]
-    });
-----
-** When a `RideRequestedEvent` is processed by the `RideEventsMessageListener`, a `Ride` entity is created and persisted in the the database. A dispatch process instance is created with the ride id as correlation key.
-** When the process instance needs to be signaled, the process instance is obtained through its correlation id. This avoids to have to manage process instance ids.
-+
-----
-    CorrelationKey correlationKey = correlationKeyFactory.newCorrelationKey(rideId);
-
-    TransactionTemplate template = new TransactionTemplate(transactionManager);
-    template.execute((TransactionStatus s) -> {
-        ProcessInstance instance = processService.getProcessInstance(correlationKey);
-        processService.signalProcessInstance(instance.getId(), "RideStarted", null);
-        return null;
-    });
-----
-
-* WorkItemHandlers
-** `MessageSenderWorkItemHandler` : sends message to a destination using Spring's `KafkaTemplate`. The message type and destination are set by workitem parameters.
-** `UpdateRideWorkItemhandler` : updates the state of the `Ride` entity. The Ride id and status are set by workitem parameters.
-
-=== Passenger service - Messaging with Spring Boot
-
-The passenger service is implemented with Spring Boot. Actually this is not a real implementation of business functionality, but rather a service mock.
-
-The implementation is very simple. The application exposes a REST endpoint, which when called will send 1 or more `RideRequestedEvent` messages to the `topic-ride-event` topic. There is additional logic to support the passenger cancelation scenario. In that case a `PassengerCanceledEvent` message is sent to to the `topic-passenger-event` when a `DriverAssignedEvent` message has been received from the `topic-driver-event` topic.
-
-Kafka messaging on Spring Boot is made easy with the `spring-kafka` component. Kafka is comfigured in `PassengerServiceKafkaConfiguration` where various components are created:
-
-* producer factory
-* consumer factory
-* template
-* listener container factory
-
-The Spring framework has excellent support for Kafka. It provides the `KafkaTemplate` to easily send messages and the `@KafkaListener` annotation to mark methods as message consumers.
-
-The `spring-kafka` configuration properties are prefixed with `kafka.`):
-
-----
-kafka.bootstrap-address=<host>:9092
-kafka.group-id=passenger-service
-kafka.concurrency=1
-----
-
-Sending messages is simply a matter of using the appropriate method on the `KafkaTemplate` instance.
-
-
-----
-      @Autowired
-      private KafkaTemplate<String, Message<?>> kafkaTemplate;
-
-      @Value("${sender.destination.passenger-canceled}")
-      private String destination;
-
-      public void send(Message<PassengerCanceledEvent> msg) {
-          ListenableFuture<SendResult<String, Message<?>>> future = kafkaTemplate.send(destination, msg.getPayload().getRideId(), msg);
-          future.addCallback(
-                  result -> log.debug("Sent 'PassengerCanceledEvent' message for ride " + msg.getPayload().getRideId()),
-                  ex -> log.error("Error sending 'PassengerCanceledEvent' message for ride " + msg.getPayload().getRideId(), ex));
-      }
-----
-
-To consume messages, a method is annotated with `@KafkaListener` specifying the destination name, and the subscription name in case of shared and/or durable subscriptions. The method will be called whenever a message is consumed from the topic or queue, with the payload of the message (a `String` in the case of a `TextMessage`) as parameter.
-
-----
-    @KafkaListener(topics = "${listener.destination.driver-assigned}")
-    public void processMessage(@Payload String messageAsJson, @Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) String key,
-                           @Header(KafkaHeaders.RECEIVED_PARTITION_ID) int partition) {
-
-        [...]
-    }
-----
-
-The `kafka.concurrency` property in the application configuration define the pool settings for the message consumers.
-
-=== Driver service - Messaging with Vert.x
-
-The driver service is implemented in Vert.x. Actually this is not a real implementation of business functionality, but rather a service mock.
-
-The implementation is quite simple. The service listens for `AssignDriverCommand` messages on the `topic-driver-command` topic. Upon consumption of a message, it sends a `DriverAssignedEvent` to the `topic-driver-event` queue. After a random delay a `RideStartedEvent` message is sent to the `topic-ride-event` topic. After another delay, a `RideEndedEvent` is sent to the `topic-ride-event` topic. +
-There is some additional logic to support other scenario's (passenger cancels the ride, driver cannot be assigned).
-
-There is no particular reason to use Vert.x for the implementation, other than that it gives the opportunity to experiment with messaging on Vert.x
-
-From a architectural point of view, the application is composed of four verticles:
-
-* MessageConsumerVerticle: listens for messages on the `topic-driver-command` queue.
-* MessageProducerVerticle: sends messages to the `topic-driver-event` and `topic-ride-event` topics.
-* MainVerticle: application starting point, manages the lifecycle of the other verticles.
-* RestApiVerticle: implements the REST endpoint for the health check.
-
-The ConsumerVerticle and ProducerVerticle communicate over the Vert.x event bus.
-
-Vert.x provides the Vert.x Kafka component, which provides Kafka producer and consumer support via a bridging layer implementing the Vert.x event bus MessageProducer and MessageConsumer APIs. +
-
-The Kafka consumer is configured in the `start` method of the `MessageConsumerVerticle`:
-
-----
-    @Override
-    public void start(Future<Void> startFuture) throws Exception {
-        Map<String, String> kafkaConfig = new HashMap<>();
-        kafkaConfig.put("bootstrap.servers", config().getString("kafka.bootstrap.servers"));
-        kafkaConfig.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        kafkaConfig.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        kafkaConfig.put("group.id", config().getString("kafka.groupid"));
-        kafkaConfig.put("enable.auto.commit", "false");
-        kafkaConsumer = KafkaConsumer.create(vertx, kafkaConfig);
-        kafkaConsumer.handler(this::handleMessage);
-        kafkaConsumer.subscribe(config().getString("kafka.topic.driver-command"));
-
-        startFuture.complete();
-    }
-----
-
-The different elements of the JSON object correspond to various sections of the message:
-
-----
-{
-  "body": "{\"messageType\":\"AssignDriverCommand\",\"id\":\"cb2b7216-832c-4b28-86eb-981ec3dd2637\",\"traceId\":\"03af65ee-d7c2-43ef-a9cb-343c519137cb\",\"sender\":\"DispatchService\",\"timestamp\":1535012681551,\"payload\":{\"rideId\":\"f7b32455-86da-46a5-9263-221f6d96459d\",\"pickup\":\"North Carolina Museum Of Art, Raleigh, NC 27607\",\"destination\":\"Wake Forest Historical Museum, Wake Forest, NC 27587\",\"price\":26.89,\"passengerId\":\"passenger188\"}}",
-  "body_type": "value",
-  "properties": {
-    "to": "topic-driver-command",
-    "message_id": "ID:e8dc2474-4de3-4a6f-91fc-cc28ce2d1ac6:1:1:1-4",
-    "creation_time": 1535012681553
-  },
-  "header": {
-    "durable": true
-  },
-  "application_properties": {
-    "uber_$dash$_trace_$dash$_id": "36648af51f2072e3:d653a01c524925f9:c10319c831379c4e:1"
-  },
-  "message_annotations": {
-    "x-opt-jms-dest": 1,
-    "x-opt-jms-msg-type": 5
-  }
-}
-----
-
-In the MessageProducerVerticle, the component is initialized in the same way.
-
-----
-    @Override
-    public void start(Future<Void> startFuture) throws Exception {
-        Map<String, String> kafkaConfig = new HashMap<>();
-        kafkaConfig.put("bootstrap.servers", config().getString("kafka.bootstrap.servers"));
-        kafkaConfig.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        kafkaConfig.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        kafkaConfig.put("acks", "1");
-        kafkaProducer = KafkaProducer.create(vertx, kafkaConfig);
-
-        minDelayBeforeDriverAssignedEvent = config().getInteger("driver.assigned.min.delay", 1);
-        maxDelayBeforeDriverAssignedEvent = config().getInteger("driver.assigned.max.delay", 3);
-        minDelayBeforeRideStartedEvent = config().getInteger("ride.started.min.delay", 5);
-        maxDelayBeforeRideStartedEvent = config().getInteger("ride.started.max.delay", 10);
-        minDelayBeforeRideEndedEvent = config().getInteger("ride.ended.min.delay", 5);
-        maxDelayBeforeRideEndedEvent = config().getInteger("ride.ended.max.delay", 10);
-
-        vertx.eventBus().consumer("message-producer", this::handleMessage);
-
-        startFuture.complete();
-    }
-----
-
-The producer takes a `JsonObject` as payload. The structure of the JsonObject should reflect the structure of the message.
-
-----
-    private void doSendDriverAssignedMessage(JsonObject msgIn, String driverId) {
-        JsonObject msgOut = new JsonObject();
-        msgOut.put("messageType","DriverAssignedEvent");
-        msgOut.put("id", UUID.randomUUID().toString());
-        msgOut.put("traceId", msgIn.getString("traceId"));
-        msgOut.put("sender", "DriverServiceSimulator");
-        msgOut.put("timestamp", Instant.now().toEpochMilli());
-        JsonObject payload = new JsonObject();
-        String rideId = msgIn.getJsonObject("payload").getString("rideId");
-        payload.put("rideId", rideId);
-        payload.put("driverId", driverId);
-        msgOut.put("payload", payload);
-
-        sendMessageToTopic(config().getString("kafka.topic.driver-event"), rideId, msgOut.toString());
-        log.debug("Sent 'DriverAssignedEvent' message for ride " + rideId);
-    }
-----
+Embedding the RHPAM proces engine in a Spring Boot application is extremely easy when using the provided Spring Boot starters. Adding the `jbpm-spring-boot-starter-basic` to the project dependencies will configure all the services required to ppower the process engine, including persistence and transaction management.
 
 == Provisioning on OpenShift
 
@@ -2409,3 +2113,344 @@ The downside of this approach is that message consumers need to filter on the sp
 *Messaging Protocol*
 
 All services in the application use the AMQP protocol over SSL/TLS (amqps) for communication with the broker. We use one-way SSL - the clients authenticate with username/password.
+
+== Code Walkthrough
+
+=== Process Definition
+
+The orchestration logic in the Dispatch service is implemented as a BPMN2 process. From a functional point of view, the orchestration is as follows:
+
+* The Dispatch service receives a _RideRequestedEvent_ message from the _topic-ride-event_ topic.
+* A _DispatchDriverCommand_ is sent to the _topic-driver-command_ topic.
+* The service waits for a _DriverDispatchedEvent_ from the _topic-driver-event_ topic.
+* If a _DriverDispatchedEvent_ is not received within 5 minutes, the state of the Ride is set to _expired_. A _RideExpiredEvent_ is sent to the _topic-ride-event_ queue.
+* As long as the ride did not start, the passenger can cancel the ride. The service waits on a _RideCanceledEvent_ from the _topic-ride-event_ topic, or a _RideStartedEvent_ form the _driver-event-topic_, whichever comes first.
+* If a _RideCanceledEvent_ is received, the status of the ride is set to _canceled_. +
+The passenger will have to pay a penalty (this part is not implemented)
+* If a _RideStartedEvent_ is received, the status of the ride is set to
+_started_ and the service waits for a _RideEndedEvent_.
+* If a _RideEndedEvent_ is received, a _HandlePaymentCommand_ message is sent to the _topic-passenger-command_ topic. The status of the ride is set to _ended_.
+
+Note that several other use cases are currently not implemented in the lab:
+
+* The driver can cancel a ride
+* The passenger can cancel a ride before the ride is assigned to a driver.
+
+The process diagram looks like:
+
+image::images/dispatch_process_2.png[]
+
+* _Signal_ event nodes are used to model the fact that the process is waiting for a certain type of message. When the service receives a message, it finds the relevant process instance, and signals the process. +
+From a conceptual view it would have been more logical to use BPMN _Message_ event nodes rather than signal nodes. However, Message event nodes are broken in the current version of RHPAM (will be fixed in the next release).
+* Signal nodes are wait states, so at each signal the state of the process instance is saved in the database.
+* The data model for the process is very simple: the process instance only keeps track of the _rideId_ and the _traceId_ for the ride. The _assign_driver_expire_duration_ process variable is the delay after which the timer fires.
++
+image::images/dispatch_process_variables.png[]
++
+image::images/dispatch_process_timer_2.png[]
+* The process uses two custom _WorkItemHandlers_.
+** The _Assign Driver_ and _Handle Payment_ nodes use the _SendMessage_ WorkItemHandler. The implementation sends a message of specified type to the specified destination.
++
+image::images/dispatch_process_send_message_2.png[]
++
+image::images/dispatch_process_send_message_data_io.png[]
+** The _Ride Request Expired_, _Driver Assigned_, _Ride_Started_, _Ride_Ended_ and _Passenger Canceled_ nodes uses the _UpdateRide_ WorkItemHandler, whose implementation updates the status of the Ride entity.
++
+image::images/dispatch_process_update_ride_2.png[]
++
+image::images/dispatch_process_update_ride_data_io.png[]
+
+=== Data model
+
+The state of a Ride is captured in the `Ride` entity.
+
+----
+@Entity
+@SequenceGenerator(name="RideSeq", sequenceName="RIDE_SEQ")
+@Table(name = "Ride")
+public class Ride {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO, generator="RideSeq")
+    private long id;
+
+    private String rideId;
+
+    private String pickup;
+
+    private String destination;
+
+    private int status;
+
+    private BigDecimal price;
+
+    private String passengerId;
+
+    private String driverId;
+
+    //getter and setters
+    [...]
+----
+
+The `Ride` entity is stored in the RHPAM database (this is done is this lab to keep things simple). The `Ride` entity is added to the list of persistent classes in `META-INF/jbpm-persistence.xml`.
+
+The `com.acme.ride.dispatch.dao.RideDao` class handles `Ride` entity CRUD operations.
+
+The `rideId` property is used as correlation key when starting an instance of the dispatch service process.
+
+=== RHPAM engine embedded in Spring Boot application
+
+Setting up the embedded RHPAM engine requires to pay attention to a number of components required for the correct functioning of the engine.
+
+* JTA Transaction manager.
+** The transaction manager used is _Narayana_, the transaction manager from WildFly and EAP.
+** The Snowdrop project, the upstream of the RHOAR Spring Boot engineering efforts, has an alternative Narayana Spring Boot starter which does supports connection pools with Apache DPCP2.
+** The Narayana transaction manager configuration properties are prefixed with `narayana`.
++
+----
+narayana.transaction-manager-id=1
+narayana.default-timeout=120
+----
++
+Note that for correct transaction recovery behavior, each Narayana transaction manager instance must be started with a unique id. Also, the transaction logs should be written to a persistent data volume. These functionalities have not been implemented for this lab.
++
+** The Narayana DBCP2 pool configuration properties are prefixed with `narayana.dbcp`:
++
+----
+narayana.dbcp.enabled=true
+narayana.dbcp.defaultAutoCommit=false
+----
++
+----
+narayana.dbcp.maxTotal=20
+----
+
+* Datasources:
+** The RHPAM engine uses a JTA managed XA datasource. When using Quartz to hande persistent timers, you also need to provide a non-managed datasource for Quartz.
+** The managed and the unmanaged datasources use a datasource connection pool powered by the Apache DBCP2 library.
+** The datasources are configured in the `com.acme.ride.dispatch.DataSourceConfiguration` class.
+** The datasource configuration properties are prefixed with `spring.datasource`:
++
+----
+spring.datasource.username=jboss
+spring.datasource.password=jboss
+spring.datasource.url=jdbc:postgresql://${postgresql.host}:5432/rhpam
+----
+** The datasource connection pool configuration properties for the unmaged datasource are prefixed with `spring.datasource.dbcp2`
++
+----
+spring.datasource.dbcp2.default-auto-commit=false
+spring.datasource.dbcp2.max-total=5
+spring.datasource.dbcp2.max-idle=5
+----
+
+* JPA
+** The RHPAM engine uses JPA for everything persistence related. The JPA provider is Hibernate.
+** The Spring beans for JTA - `EntityManagerFactory, PersistenceUnitManager, JpaVendorAdapter` - are configured in the `com.acme.ride.dispatch.JpaConfiguration` class.
+** Hibernate configuration properties are prefixed with `spring.jpa.properties.hibernate`:
++
+----
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.properties.hibernate.transaction.jta.platform=org.hibernate.service.jta.platform.internal.JBossStandAloneJtaPlatform
+spring.jpa.properties.hibernate.id.new_generator_mappings=false
+spring.jpa.properties.hibernate.hbm2ddl.auto=validate
+spring.jpa.properties.hibernate.show_sql=false
+spring.jpa.properties.hibernate.connection.release_mode=after_statement
+----
+
+* Quartz
+** By default the RHPAM engine uses a `java.util.concurrent.ScheduledThreadPoolExecutor` to schedule timers and jobs, which will not survive an application restart. To use persistent timers, EJB Timers can be used in a JEE environment. In a non JEE environment, Quartz should be used.
+** The Quartz scheduler is automatically created by the RHPAM engine if a application property `jbpm.quartz.enabled` is set `true`. Quartz configuration file needs to be provided - see the `jbpm-quartz.properties` file in the `etc` folder of the source code for the quartz properties file used. Additionally to use database as job store application property `jbpm.quartz.db` needs to be set to true.
+
+
+* RHPAM engine
+
+* JMS: the JMS layer is configured is the same way as in the passenger service. Details can be found in the next paragraph.
+** The JMS Messaglisteners `DriverAssignedEventMessageListener`, `PassengerCanceledEventMessageListener` and `RideEventsMessageListener` interact with the RHPAM engine through the jBPM services API. This interaction occurs in a transactional context, managed by Spring's `TransactionTemplate`.
++
+----
+    TransactionTemplate template = new TransactionTemplate(transactionManager);
+    template.execute((TransactionStatus s) -> {
+        [...]
+    });
+----
+** When a `RideRequestedEvent` is processed by the `RideEventsMessageListener`, a `Ride` entity is created and persisted in the the database. A dispatch process instance is created with the ride id as correlation key.
+** When the process instance needs to be signaled, the process instance is obtained through its correlation id. This avoids to have to manage process instance ids.
++
+----
+    CorrelationKey correlationKey = correlationKeyFactory.newCorrelationKey(rideId);
+
+    TransactionTemplate template = new TransactionTemplate(transactionManager);
+    template.execute((TransactionStatus s) -> {
+        ProcessInstance instance = processService.getProcessInstance(correlationKey);
+        processService.signalProcessInstance(instance.getId(), "RideStarted", null);
+        return null;
+    });
+----
+
+* WorkItemHandlers
+** `MessageSenderWorkItemHandler` : sends message to a destination using Spring's `KafkaTemplate`. The message type and destination are set by workitem parameters.
+** `UpdateRideWorkItemhandler` : updates the state of the `Ride` entity. The Ride id and status are set by workitem parameters.
+
+=== Passenger service - Messaging with Spring Boot
+
+The passenger service is implemented with Spring Boot. Actually this is not a real implementation of business functionality, but rather a service mock.
+
+The implementation is very simple. The application exposes a REST endpoint, which when called will send 1 or more `RideRequestedEvent` messages to the `topic-ride-event` topic. There is additional logic to support the passenger cancelation scenario. In that case a `PassengerCanceledEvent` message is sent to to the `topic-passenger-event` when a `DriverAssignedEvent` message has been received from the `topic-driver-event` topic.
+
+Kafka messaging on Spring Boot is made easy with the `spring-kafka` component. Kafka is comfigured in `PassengerServiceKafkaConfiguration` where various components are created:
+
+* producer factory
+* consumer factory
+* template
+* listener container factory
+
+The Spring framework has excellent support for Kafka. It provides the `KafkaTemplate` to easily send messages and the `@KafkaListener` annotation to mark methods as message consumers.
+
+The `spring-kafka` configuration properties are prefixed with `kafka.`):
+
+----
+kafka.bootstrap-address=<host>:9092
+kafka.group-id=passenger-service
+kafka.concurrency=1
+----
+
+Sending messages is simply a matter of using the appropriate method on the `KafkaTemplate` instance.
+
+
+----
+      @Autowired
+      private KafkaTemplate<String, Message<?>> kafkaTemplate;
+
+      @Value("${sender.destination.passenger-canceled}")
+      private String destination;
+
+      public void send(Message<PassengerCanceledEvent> msg) {
+          ListenableFuture<SendResult<String, Message<?>>> future = kafkaTemplate.send(destination, msg.getPayload().getRideId(), msg);
+          future.addCallback(
+                  result -> log.debug("Sent 'PassengerCanceledEvent' message for ride " + msg.getPayload().getRideId()),
+                  ex -> log.error("Error sending 'PassengerCanceledEvent' message for ride " + msg.getPayload().getRideId(), ex));
+      }
+----
+
+To consume messages, a method is annotated with `@KafkaListener` specifying the destination name, and the subscription name in case of shared and/or durable subscriptions. The method will be called whenever a message is consumed from the topic or queue, with the payload of the message (a `String` in the case of a `TextMessage`) as parameter.
+
+----
+    @KafkaListener(topics = "${listener.destination.driver-assigned}")
+    public void processMessage(@Payload String messageAsJson, @Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) String key,
+                           @Header(KafkaHeaders.RECEIVED_PARTITION_ID) int partition) {
+
+        [...]
+    }
+----
+
+The `kafka.concurrency` property in the application configuration define the pool settings for the message consumers.
+
+=== Driver service - Messaging with Vert.x
+
+The driver service is implemented in Vert.x. Actually this is not a real implementation of business functionality, but rather a service mock.
+
+The implementation is quite simple. The service listens for `AssignDriverCommand` messages on the `topic-driver-command` topic. Upon consumption of a message, it sends a `DriverAssignedEvent` to the `topic-driver-event` queue. After a random delay a `RideStartedEvent` message is sent to the `topic-ride-event` topic. After another delay, a `RideEndedEvent` is sent to the `topic-ride-event` topic. +
+There is some additional logic to support other scenario's (passenger cancels the ride, driver cannot be assigned).
+
+There is no particular reason to use Vert.x for the implementation, other than that it gives the opportunity to experiment with messaging on Vert.x
+
+From a architectural point of view, the application is composed of four verticles:
+
+* MessageConsumerVerticle: listens for messages on the `topic-driver-command` queue.
+* MessageProducerVerticle: sends messages to the `topic-driver-event` and `topic-ride-event` topics.
+* MainVerticle: application starting point, manages the lifecycle of the other verticles.
+* RestApiVerticle: implements the REST endpoint for the health check.
+
+The ConsumerVerticle and ProducerVerticle communicate over the Vert.x event bus.
+
+Vert.x provides the Vert.x Kafka component, which provides Kafka producer and consumer support via a bridging layer implementing the Vert.x event bus MessageProducer and MessageConsumer APIs. +
+
+The Kafka consumer is configured in the `start` method of the `MessageConsumerVerticle`:
+
+----
+    @Override
+    public void start(Future<Void> startFuture) throws Exception {
+        Map<String, String> kafkaConfig = new HashMap<>();
+        kafkaConfig.put("bootstrap.servers", config().getString("kafka.bootstrap.servers"));
+        kafkaConfig.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        kafkaConfig.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        kafkaConfig.put("group.id", config().getString("kafka.groupid"));
+        kafkaConfig.put("enable.auto.commit", "false");
+        kafkaConsumer = KafkaConsumer.create(vertx, kafkaConfig);
+        kafkaConsumer.handler(this::handleMessage);
+        kafkaConsumer.subscribe(config().getString("kafka.topic.driver-command"));
+
+        startFuture.complete();
+    }
+----
+
+The different elements of the JSON object correspond to various sections of the message:
+
+----
+{
+  "body": "{\"messageType\":\"AssignDriverCommand\",\"id\":\"cb2b7216-832c-4b28-86eb-981ec3dd2637\",\"traceId\":\"03af65ee-d7c2-43ef-a9cb-343c519137cb\",\"sender\":\"DispatchService\",\"timestamp\":1535012681551,\"payload\":{\"rideId\":\"f7b32455-86da-46a5-9263-221f6d96459d\",\"pickup\":\"North Carolina Museum Of Art, Raleigh, NC 27607\",\"destination\":\"Wake Forest Historical Museum, Wake Forest, NC 27587\",\"price\":26.89,\"passengerId\":\"passenger188\"}}",
+  "body_type": "value",
+  "properties": {
+    "to": "topic-driver-command",
+    "message_id": "ID:e8dc2474-4de3-4a6f-91fc-cc28ce2d1ac6:1:1:1-4",
+    "creation_time": 1535012681553
+  },
+  "header": {
+    "durable": true
+  },
+  "application_properties": {
+    "uber_$dash$_trace_$dash$_id": "36648af51f2072e3:d653a01c524925f9:c10319c831379c4e:1"
+  },
+  "message_annotations": {
+    "x-opt-jms-dest": 1,
+    "x-opt-jms-msg-type": 5
+  }
+}
+----
+
+In the MessageProducerVerticle, the component is initialized in the same way.
+
+----
+    @Override
+    public void start(Future<Void> startFuture) throws Exception {
+        Map<String, String> kafkaConfig = new HashMap<>();
+        kafkaConfig.put("bootstrap.servers", config().getString("kafka.bootstrap.servers"));
+        kafkaConfig.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        kafkaConfig.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        kafkaConfig.put("acks", "1");
+        kafkaProducer = KafkaProducer.create(vertx, kafkaConfig);
+
+        minDelayBeforeDriverAssignedEvent = config().getInteger("driver.assigned.min.delay", 1);
+        maxDelayBeforeDriverAssignedEvent = config().getInteger("driver.assigned.max.delay", 3);
+        minDelayBeforeRideStartedEvent = config().getInteger("ride.started.min.delay", 5);
+        maxDelayBeforeRideStartedEvent = config().getInteger("ride.started.max.delay", 10);
+        minDelayBeforeRideEndedEvent = config().getInteger("ride.ended.min.delay", 5);
+        maxDelayBeforeRideEndedEvent = config().getInteger("ride.ended.max.delay", 10);
+
+        vertx.eventBus().consumer("message-producer", this::handleMessage);
+
+        startFuture.complete();
+    }
+----
+
+The producer takes a `JsonObject` as payload. The structure of the JsonObject should reflect the structure of the message.
+
+----
+    private void doSendDriverAssignedMessage(JsonObject msgIn, String driverId) {
+        JsonObject msgOut = new JsonObject();
+        msgOut.put("messageType","DriverAssignedEvent");
+        msgOut.put("id", UUID.randomUUID().toString());
+        msgOut.put("traceId", msgIn.getString("traceId"));
+        msgOut.put("sender", "DriverServiceSimulator");
+        msgOut.put("timestamp", Instant.now().toEpochMilli());
+        JsonObject payload = new JsonObject();
+        String rideId = msgIn.getJsonObject("payload").getString("rideId");
+        payload.put("rideId", rideId);
+        payload.put("driverId", driverId);
+        msgOut.put("payload", payload);
+
+        sendMessageToTopic(config().getString("kafka.topic.driver-event"), rideId, msgOut.toString());
+        log.debug("Sent 'DriverAssignedEvent' message for ride " + rideId);
+    }
+----
