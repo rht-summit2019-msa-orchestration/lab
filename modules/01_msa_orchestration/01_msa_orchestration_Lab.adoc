@@ -87,7 +87,7 @@ $ oc login https://master.<GUID>.rhte.opentlc.com -u user<lab number>
 
 *RHOAR*: Red Hat OpenShift Application Runtimes. A collection of runtimes, including WildFly Swarm, Spring Boot, Eclipse Vert.x and Node.js, designed to run on OpenShift. RHOAR provides a prescriptive approach to cloud-native development on OpenShift.
 
-*EnMasse*: EnMasse is an open source project for managed, self-service messaging on OpenShift. It powers the https://www.redhat.com/en/explore/amq-online[Red Hat AMQ Online] offering.
+*AMQ Streams*: AMQ Streams is the Red Hat supported distribution of Apache Kafka, tailored specifically to run on OpenShift. Apache Kafka is a popular platform for streaming data delivery and processing.
 
 == Goals and learning objectives
 
