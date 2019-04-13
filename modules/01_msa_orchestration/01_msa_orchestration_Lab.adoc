@@ -112,52 +112,18 @@ The runtime architecture of the lab looks like:
 
 image::images/presentation_runtime_topology.png[]
 
-*Message data model*
-
-The message payload is kept deliberately very simple. Messages are JSON objects, with a generic structure:
-
-----
-{
-  "messageType": "RideRequestedEvent",
-  "id": "19ad5b0b-286b-41bb-86e3-474fbff0a3aa",
-  "traceId": "907b52ca-5fe1-4f89-909f-79803eb6af62",
-  "sender": "PassengerService",
-  "timestamp": 1521148332397",
-  "payload":{}
- }
-----
-
-* messageType: the type of the message. In general a distinction is made between Commands and Events. Commands tell the recipient to do something (e.g. _AssignDriverCommand, HandlePaymentCommand_). Events inform interested parties that something happened, so that they can act on it (_DriverAssignedEvent, RideStartedEvent_).
-* id: unique id per message.
-* traceId: unique id that is passed along with messages through the entire functional message flow.For tracing purposes.
-* sender: originating service
-* timestamp: timestamp when the message was created
-* payload: a JSON object representing the proper payload of the message. This will be different depending on the message type.
+NOTE: In the picture above, replace EnMasse with AMQ Streams
 
 In the lab, we'll implement the following message flows:
 
 image::images/rhte-message-flow.png[]
 
-*Topics*
+Messages flowing through the systems fall in two categories: _Commands_, which tell the target system to do something - example: _AssignDriverCommand_, and _Events_, which inform tatget systems of a state change in the application - example: _DriverAssignedEvent_
 
-AMQ 7 has a powerful and flexible addressing model, that comprises three main concepts: addresses, queues and routing types. An address represents a messaging endpoint. Within the configuration, an address is given a unique name, 0 or more queues, and a routing type. +
-The routing type determines how messages are distributed amongst its queues.
-
-* _anycast_: messages are routed to a single queue within the matching address, in a point-to-point manner.
-* _multicast_ : messages are routed to every queue within the matching address, in a publish-subscribe manner.
-
-image::images/artemis_addressing_anycast.png[]
-
-image::images/artemis_addressing_multicast.png[]
-
-The AMQ 7 address model maps nicely to the JMS concepts of queues and topics.
+Apache Kafka follows the _publish and subscribe_ messaging model: messages can be consumed by several consumers.
 
 For an event-driven system as the one that is implemented in this lab, pubish/subscribe topics is generally what you want, as there are typically several services that are interested in a particular type of event. How to map event types to topics? This can vary from 1 topic for all event types to a separate topic per event type, or any variations in between. For the lab, we tried to segment per domain and per event class (event or command). So we ended up with 5 topics: _topic-ride-event_, _topic-driver-command_, _topic-driver-event_, _topic-passenger-command_ and _topic-passenger-event_. +
-The downside of this approach is that message consumers need to filter on the specific event types that they are interested in.
-
-*Messaging Protocol*
-
-All services in the application use the AMQP protocol over SSL/TLS (amqps) for communication with the broker. We use one-way SSL - the clients authenticate with username/password.
+This means that message consumers need to filter on the specific event types that they are interested in an discard others.
 
 == Lab Material
 
@@ -2395,3 +2361,51 @@ In this lab, we use the brokered address space.
 The applicaton services use the RHOAR runtimes. The Ride service and Dispatch service are implemented with Spring Boot, the Driver service uses Vert.x. The versions used are aligned to the current release of RHOAR.
 The choice to use two different runtimes was done on purpose to explore how messaging and in particular AMQP can be used on top of these runtimes. It is planned for further iterations of this lab to also leverage Thorntail (aka WildFly Swarm) and Fuse (Camel on Spring Boot).
 
+== Architecture Details
+
+*Message data model*
+
+The message payload is kept deliberately very simple. Messages are JSON objects, with a generic structure:
+
+----
+{
+  "messageType": "RideRequestedEvent",
+  "id": "19ad5b0b-286b-41bb-86e3-474fbff0a3aa",
+  "traceId": "907b52ca-5fe1-4f89-909f-79803eb6af62",
+  "sender": "PassengerService",
+  "timestamp": 1521148332397",
+  "payload":{}
+ }
+----
+
+* messageType: the type of the message. In general a distinction is made between Commands and Events. Commands tell the recipient to do something (e.g. _AssignDriverCommand, HandlePaymentCommand_). Events inform interested parties that something happened, so that they can act on it (_DriverAssignedEvent, RideStartedEvent_).
+* id: unique id per message.
+* traceId: unique id that is passed along with messages through the entire functional message flow.For tracing purposes.
+* sender: originating service
+* timestamp: timestamp when the message was created
+* payload: a JSON object representing the proper payload of the message. This will be different depending on the message type.
+
+In the lab, we'll implement the following message flows:
+
+image::images/rhte-message-flow.png[]
+
+*Topics*
+
+AMQ 7 has a powerful and flexible addressing model, that comprises three main concepts: addresses, queues and routing types. An address represents a messaging endpoint. Within the configuration, an address is given a unique name, 0 or more queues, and a routing type. +
+The routing type determines how messages are distributed amongst its queues.
+
+* _anycast_: messages are routed to a single queue within the matching address, in a point-to-point manner.
+* _multicast_ : messages are routed to every queue within the matching address, in a publish-subscribe manner.
+
+image::images/artemis_addressing_anycast.png[]
+
+image::images/artemis_addressing_multicast.png[]
+
+The AMQ 7 address model maps nicely to the JMS concepts of queues and topics.
+
+For an event-driven system as the one that is implemented in this lab, pubish/subscribe topics is generally what you want, as there are typically several services that are interested in a particular type of event. How to map event types to topics? This can vary from 1 topic for all event types to a separate topic per event type, or any variations in between. For the lab, we tried to segment per domain and per event class (event or command). So we ended up with 5 topics: _topic-ride-event_, _topic-driver-command_, _topic-driver-event_, _topic-passenger-command_ and _topic-passenger-event_. +
+The downside of this approach is that message consumers need to filter on the specific event types that they are interested in.
+
+*Messaging Protocol*
+
+All services in the application use the AMQP protocol over SSL/TLS (amqps) for communication with the broker. We use one-way SSL - the clients authenticate with username/password.
