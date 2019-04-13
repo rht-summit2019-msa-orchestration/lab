@@ -2,7 +2,7 @@
 :data-uri:
 :toc2:
 
-= RHTE 2018 Microservices Orchestration Lab
+= Red Hat Summit 2019: Next Gen Process Automation - using a process engine to orchestrate microservices
 
 == Background
 
