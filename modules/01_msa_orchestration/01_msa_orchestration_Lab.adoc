@@ -106,65 +106,6 @@ In the context of this lab, we will focus on a tiny part of the overall solution
 
 NOTE: The _Single Writer_ Principle is often used in microservice and event-driven architectures. The idea is that a single service is responsible for maintaining the state of an entity. Other services are kept up to date by subscribing to events that the Single Writer emits whenever the state of the entity changes. Subscribers typically maintain a read-only view of the entity.
 
-== Technical considerations and choices
-
-* The services in this lab are developed using RHOAR runtimes (Spring Boot, Vert.x)
-* The services used in this lab (Passenger service, Driver service, Dispatch service) communicate by sending and consuming messages to and from topics deployed on a message broker.
-* The _Ride_ entity encapsulates the state of a ride. The entity is owned by the dispatch service.
-* The dispatch server uses the RHPAM process engine to coordinate the message flow between the services and advance the state of the Ride entity.
-* The Ride entity is stored in a relational database. +
-To keep things simple, the entity is stored in the database schema used by the RHPAM engine.
-* The Passenger and Driver service implementations used in this lab are mock implementations. They do however send and consume messages in order to mimick the message flow between the services.
-
-=== RHPAM
-
-When it comes to leveraging the RHPAM engine in a microservice, there are several possibilities. We could use the Process Server as is, but Process Server being a general use business process execution server, it seems a bit heavy-weight for what we need. In the end, the fact that the Dispatch service uses a process engine should be an implementation detail. If we use Process Server as such, the API (be it REST or JMS) would leak to client services, which have to know about Process Server specific things like deployment id's, process instance id's, specific payload structures etc...
-
-The RHPAM engine can also be embedded in a stand-alone application. The product provides Spring Boot starters to make that task easier.
-
-Our embedded engine uses Narayana as transaction manager, PostgreSQL for the database and Quartz to manage persistent timers.
-
-The next decision to make is how to package or deploy the process definition. Process Server and the KIE Spring Boot starters leverage the _Deployment Service_, which relies on _Maven_ to download and deploy the kjar(s) containing the business process and other assets at runtime. The main drawback here is the dependency on a Maven repository like Nexus at runtime (or at build time, but then you have to make sure that the kjar and its dependencies are injected in a local maven repo in the application image). +
-Specifically for this lab, we wanted to avoid a dependency on a Nexus installation.
-
-As an alternative, the business process definition (and other assets if required) can be bundled into the kjar, that can be declared as a dependency in the _pom.xml_ file of the Spring Boot application. This is the approach chosen for this lab. +
-The main downside here is that the design of the process definition needs to be done in Business Central (as we don't really support the Eclipse based designer any more), which requires frequent roundtripping between Business Central and the application source code.
-
-=== Messaging
-
-When it comes to messaging, again some choices have to be made. In a Java world, JMS would be the first choice. However JMS only specifies an API, not the message format or wire protocol. With other words, JMS is not interoperable, even not between broker implementations. In a polyglot microservices world this is a huge drawback.
-
-AMQP on the other hand also defines the message format and wire protocol, making it interoperable between platforms and languages.
-
-Brokers like AMQ 7, a high-performance messaging implementation based on ActiveMQ Artemis, support multiple protocols, including AMQP, and offer a JMS client as well. With other words, a Java client can use the AMQ 7 JMS client - which uses the OpenWire protocol - to send messages to queue on a AMQ 7 broker, to be consumed by a AMQP client written in e.g. .Net or Ruby.
-
-The _qpid-jms_ project provides a JMS API on top of AMQP. When using this library, the client uses a familiar JMS API to produce or consume messages, on top of the AMQP protocol. The _qpid-jms_ library is fully JMS 2.0 compatible, and supports shared and durable subscriptions.
-
-At the moment of writing, Red Hat does only provide _Tech Preview_ images for AMQ 7. On the other hand there is the EnMasse project, which powers the AMQ Online offering hosted on OpenShift. http://enmasse.io[EnMasse] is an open source project for managed, self-service messaging on OpenShift. EnMasse can be used for many purposes, such as moving your messaging infrastructure to the cloud without depending on a specific cloud provider, building a scalable messaging backbone for IoT, or just as a cloud-ready version of a message broker. The last point is exactly what we need for this lab.
-
-EnMasse can provision different types of messaging depending on your use case. A user can request messaging resources by creating an Address Space.
-
-EnMasse currently supports a _standard_ and a _brokered_ address space type, each with different semantics.
-
-*Standard Address Space*
-
-The standard address space type is the default type in EnMasse, and is focused on scaling in the number of connections and the throughput of the system. It supports AMQP and MQTT protocols. This address space type is based on open source projects such as [Apache ActiveMQ Artemis](https://activemq.apache.org/artemis/) and [Apache Qpid Dispatch Router](https://qpid.apache.org/components/dispatch-router/index.html) and provides elastic scaling of these components.
-
-image::images/enmasse_overall_view.png[]
-
-*Brokered Address Space*
-
-The brokered address space type is the "classic" message broker in the cloud which supports AMQP, CORE, OpenWire, and MQTT protocols. It supports JMS with transactions, message groups, selectors on queues and so on. These features are useful for building complex messaging patterns. This address space is also more lightweight as it features only a single broker and a management console.
-
-image::images/enmasse_brokered_view.png[]
-
-In this lab, we use the brokered address space.
-
-=== Service Implementations
-
-The applicaton services use the RHOAR runtimes. The Ride service and Dispatch service are implemented with Spring Boot, the Driver service uses Vert.x. The versions used are aligned to the current release of RHOAR.
-The choice to use two different runtimes was done on purpose to explore how messaging and in particular AMQP can be used on top of these runtimes. It is planned for further iterations of this lab to also leverage Thorntail (aka WildFly Swarm) and Fuse (Camel on Spring Boot).
-
 == Architecture
 
 The runtime architecture of the lab looks like:
@@ -2394,3 +2335,63 @@ image::images/grafana_dashboard_1.png[]
 Congratulations! You made it to the end of the lab.
 
 === Appendix - Technical details
+
+== Technical considerations and choices
+
+* The services in this lab are developed using RHOAR runtimes (Spring Boot, Vert.x)
+* The services used in this lab (Passenger service, Driver service, Dispatch service) communicate by sending and consuming messages to and from topics deployed on a message broker.
+* The _Ride_ entity encapsulates the state of a ride. The entity is owned by the dispatch service.
+* The dispatch server uses the RHPAM process engine to coordinate the message flow between the services and advance the state of the Ride entity.
+* The Ride entity is stored in a relational database. +
+To keep things simple, the entity is stored in the database schema used by the RHPAM engine.
+* The Passenger and Driver service implementations used in this lab are mock implementations. They do however send and consume messages in order to mimick the message flow between the services.
+
+=== RHPAM
+
+When it comes to leveraging the RHPAM engine in a microservice, there are several possibilities. We could use the Process Server as is, but Process Server being a general use business process execution server, it seems a bit heavy-weight for what we need. In the end, the fact that the Dispatch service uses a process engine should be an implementation detail. If we use Process Server as such, the API (be it REST or JMS) would leak to client services, which have to know about Process Server specific things like deployment id's, process instance id's, specific payload structures etc...
+
+The RHPAM engine can also be embedded in a stand-alone application. The product provides Spring Boot starters to make that task easier.
+
+Our embedded engine uses Narayana as transaction manager, PostgreSQL for the database and Quartz to manage persistent timers.
+
+The next decision to make is how to package or deploy the process definition. Process Server and the KIE Spring Boot starters leverage the _Deployment Service_, which relies on _Maven_ to download and deploy the kjar(s) containing the business process and other assets at runtime. The main drawback here is the dependency on a Maven repository like Nexus at runtime (or at build time, but then you have to make sure that the kjar and its dependencies are injected in a local maven repo in the application image). +
+Specifically for this lab, we wanted to avoid a dependency on a Nexus installation.
+
+As an alternative, the business process definition (and other assets if required) can be bundled into the kjar, that can be declared as a dependency in the _pom.xml_ file of the Spring Boot application. This is the approach chosen for this lab. +
+The main downside here is that the design of the process definition needs to be done in Business Central (as we don't really support the Eclipse based designer any more), which requires frequent roundtripping between Business Central and the application source code.
+
+=== Messaging
+
+When it comes to messaging, again some choices have to be made. In a Java world, JMS would be the first choice. However JMS only specifies an API, not the message format or wire protocol. With other words, JMS is not interoperable, even not between broker implementations. In a polyglot microservices world this is a huge drawback.
+
+AMQP on the other hand also defines the message format and wire protocol, making it interoperable between platforms and languages.
+
+Brokers like AMQ 7, a high-performance messaging implementation based on ActiveMQ Artemis, support multiple protocols, including AMQP, and offer a JMS client as well. With other words, a Java client can use the AMQ 7 JMS client - which uses the OpenWire protocol - to send messages to queue on a AMQ 7 broker, to be consumed by a AMQP client written in e.g. .Net or Ruby.
+
+The _qpid-jms_ project provides a JMS API on top of AMQP. When using this library, the client uses a familiar JMS API to produce or consume messages, on top of the AMQP protocol. The _qpid-jms_ library is fully JMS 2.0 compatible, and supports shared and durable subscriptions.
+
+At the moment of writing, Red Hat does only provide _Tech Preview_ images for AMQ 7. On the other hand there is the EnMasse project, which powers the AMQ Online offering hosted on OpenShift. http://enmasse.io[EnMasse] is an open source project for managed, self-service messaging on OpenShift. EnMasse can be used for many purposes, such as moving your messaging infrastructure to the cloud without depending on a specific cloud provider, building a scalable messaging backbone for IoT, or just as a cloud-ready version of a message broker. The last point is exactly what we need for this lab.
+
+EnMasse can provision different types of messaging depending on your use case. A user can request messaging resources by creating an Address Space.
+
+EnMasse currently supports a _standard_ and a _brokered_ address space type, each with different semantics.
+
+*Standard Address Space*
+
+The standard address space type is the default type in EnMasse, and is focused on scaling in the number of connections and the throughput of the system. It supports AMQP and MQTT protocols. This address space type is based on open source projects such as [Apache ActiveMQ Artemis](https://activemq.apache.org/artemis/) and [Apache Qpid Dispatch Router](https://qpid.apache.org/components/dispatch-router/index.html) and provides elastic scaling of these components.
+
+image::images/enmasse_overall_view.png[]
+
+*Brokered Address Space*
+
+The brokered address space type is the "classic" message broker in the cloud which supports AMQP, CORE, OpenWire, and MQTT protocols. It supports JMS with transactions, message groups, selectors on queues and so on. These features are useful for building complex messaging patterns. This address space is also more lightweight as it features only a single broker and a management console.
+
+image::images/enmasse_brokered_view.png[]
+
+In this lab, we use the brokered address space.
+
+=== Service Implementations
+
+The applicaton services use the RHOAR runtimes. The Ride service and Dispatch service are implemented with Spring Boot, the Driver service uses Vert.x. The versions used are aligned to the current release of RHOAR.
+The choice to use two different runtimes was done on purpose to explore how messaging and in particular AMQP can be used on top of these runtimes. It is planned for further iterations of this lab to also leverage Thorntail (aka WildFly Swarm) and Fuse (Camel on Spring Boot).
+
