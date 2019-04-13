@@ -91,9 +91,8 @@ $ oc login https://master.<GUID>.rhte.opentlc.com -u user<lab number>
 
 == Goals and learning objectives
 
-* Leverage RHPAM as a lightweight, embedded service orchestrator.
-* Learn how to provide messaging functionality in Spring Boot and Vert.x applications.
-* Learn how to add distributed tracing to Spring Boot and Vert.x applications.
+* Leverage RHPAM as a lightweight, embedded service orchestrator in an event driven microservice architecture.
+* Gain insight in the behavior of the embedded process orchestrator with distributed tracing and application performance monitoring.
 
 == Use case
 
