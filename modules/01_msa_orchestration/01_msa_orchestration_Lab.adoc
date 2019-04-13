@@ -33,8 +33,10 @@ You will need the following tools on your local machine. These are installed on 
 * `oc` CLI tool, version 3.11
 * `git`
 * a text editor like Atom, or Sublime Text (optional)
-* Ansible version 2.7.x (optional)
-* SoapUI version 5.4.0 (optional)
++
+NOTE: Check which text editor is installed on the Summit lab laptop
+* Ansible version 2.7.x
+* SoapUI version 5.4.0
 
 *Skills*
 
