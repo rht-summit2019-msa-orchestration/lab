@@ -263,7 +263,7 @@ $ ansible-playbook playbooks/kafka_topics.yml
 +
 image::images/kafka_topics_ansible_playbook.png[]
 . Take a moment to review the installation.
-* The Kafka cluster is deployed in a project `kafka-cluster-user<lab number>`. In the OpenShift console, log in as your user, and navigate to the project where the Kafka cluster is deployed. Expect to see the following:
+* The Kafka cluster is deployed in a project `kafka-cluster-user1`. In the OpenShift console, log in as your user, and navigate to the project where the Kafka cluster is deployed. Expect to see the following:
 +
 image::images/kafka_cluster_deployment.png[]
 +
@@ -273,7 +273,7 @@ image::images/kafka_cluster_deployment.png[]
 * If you want to review the Kafka cluster resource, you can get the yaml representation with `oc`:
 +
 ----
-$ export KAFKA_CLUSTER_PRJ=kafka-cluster-user<lab number>
+$ export KAFKA_CLUSTER_PRJ=kafka-cluster-user1
 $ oc project $KAFKA_CLUSTER_PRJ
 $ oc get kafka kafka-cluster -o yaml
 ----
@@ -324,11 +324,11 @@ $ ansible-playbook playbooks/gogs.yml
 . Expect the playbook to run to completion without failures.
 +
 image::images/gogs_ansible_playbook_2.png[]
-. Gogs is deployed in the `ride-msa-tools-user<lab number>` project. +
+. Gogs is deployed in the `ride-msa-tools-user1` project. +
 Get the URL for the `gogs` route:
 +
 ----
-$ export TOOLS_PRJ=ride-msa-tools-user<lab number>
+$ export TOOLS_PRJ=ride-msa-tools-user1
 $ echo "http://$(oc get route gogs -o jsonpath='{.spec.host}') -n $TOOLS_PRJ"
 ----
 . In a web browser window, navigate to the gogs URL. Expect to see the Gogs landing page.
@@ -351,7 +351,7 @@ $ cd ansible
 $ ansible-playbook playbooks/pgadmin4.yml
 ----
 . Expect the playbook to run to completion without failures.
-. pgAdmin4 is deployed in the `ride-msa-tools-user<lab number>` project. +
+. pgAdmin4 is deployed in the `ride-msa-tools-user1` project. +
 Get the URL for the `pgadmin4` route:
 +
 ----
@@ -468,7 +468,7 @@ When the Jenkins pod is up and running, the command returns `1`:
 +
 image::images/jenkins_check_dc_2.png[]
 +
-Alternatively, check the status of the Jenkins deployment in the OpenShift console. In the OpenShift web console, navigate to the `ride-msa-tools-user<lab number>` project. Expect to see a dark blue circle next to the Jenkins deployment as an indication that the Jenkins pod is up and running.
+Alternatively, check the status of the Jenkins deployment in the OpenShift console. In the OpenShift web console, navigate to the `ride-msa-tools-user1` project. Expect to see a dark blue circle next to the Jenkins deployment as an indication that the Jenkins pod is up and running.
 +
 image::images/jenkins_dc_deployed.png[]
 
@@ -642,24 +642,24 @@ $ ansible-playbook playbooks/driver_service.yml
 ----
 . Expect the playbook to run to completion without failures.
 . Review the installation:
-* The build pipeline and the binary buildconfig for the driver service are created in the `ride-msa-tools-user<lab number>` project.
+* The build pipeline and the binary buildconfig for the driver service are created in the `ride-msa-tools-user1` project.
 +
 ----
 $ oc get bc -n $TOOLS_PRJ
 ----
 +
 image::images/driver_service_bc.png[]
-* The deploymentconfig and service for the Driver service are created in the `ride-msa-services-user<lab number>` project:
+* The deploymentconfig and service for the Driver service are created in the `ride-msa-services-user1` project:
 +
 ----
-$ export SERVICES_PRJ=ride-msa-services-user<lab number>
+$ export SERVICES_PRJ=ride-msa-services-user1
 $ oc project $SERVICES_PRJ
 $ oc get dc
 $ oc get services
 ----
 +
 image::images/driver_service_dc.png[]
-* The configmaps are created in the `ride-msa-services-user<lab number>` project:
+* The configmaps are created in the `ride-msa-services-user1` project:
 +
 ----
 $ oc get configmap
@@ -679,13 +679,13 @@ image::images/driver_service_configmap_details.png[]
 ----
 $ oc start-build driver-service-pipeline -n $TOOLS_PRJ
 ----
-. Follow the progression of the build pipeline in the OpenShift console - In the OpenShift console, navigate to the _ride-msa-tools-user<lab number>_ project, and select _Builds->Pipelines_ from the side menu. +
+. Follow the progression of the build pipeline in the OpenShift console - In the OpenShift console, navigate to the _ride-msa-tools-user1_ project, and select _Builds->Pipelines_ from the side menu. +
 Expect the pipeline to complete succesfully.
 +
 image::images/driver_service_build_pipeline.png[]
 +
 If the pipeline build fails, check the pipeline build logs to see what went wrong, and if needed fix the issue.
-. Once the pipeline has executed, check that the driver service has deployed successfully in the _ride-msa-services-user<lab number>_ project.
+. Once the pipeline has executed, check that the driver service has deployed successfully in the _ride-msa-services-user1_ project.
 +
 image::images/driver_service_deployed.png[]
 . In the OpenShift console, navigate to the driver service pod, and check the logs of the pod. Alternatively you can use `oc logs -f <name of the pod>`. +
@@ -747,7 +747,7 @@ $ oc get service -n $SERVICES_PRJ
 ----
 +
 image::images/passenger_service_dc.png[]
-* The configmaps are created in the `ride-msa-services-user<lab number>` project:
+* The configmaps are created in the `ride-msa-services-user1` project:
 +
 ----
 $ oc get configmap -n $SERVICES_PRJ
