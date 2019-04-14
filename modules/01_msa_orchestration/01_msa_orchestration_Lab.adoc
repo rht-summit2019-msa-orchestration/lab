@@ -54,13 +54,14 @@ Details about the environment are obtained through the Red Hat Summit _GuidGrabb
 
 . In a browser window, navigate to http://bit.ly/summit-guidgrabber.
 +
-image::images/guid_grabber_landing_page.png[]
-. From this page select the Lab Code : `A1009`
-. Enter the *Activation Key* provided by the lab proctor.
-. Click `Next`.
+image::images/guid_grabber_landing_page_summit.png[]
+. From this page select the Lab Code : `TA39DD: Next-Gen Process Management: a microservices approach to business automation`
+. Enter the *Activation Key*: `nextgenprocessmanagement`.
+. Enter your email address.
+. Click `Submit`.
 . The resulting page will display your lab’s GUID and other useful information about your lab environment. +
 +
-image::images/guid_grabber_details_page.png[]
+image::images/guid_grabber_details_page_2.png[]
 . When you are completely done with your lab environment, please click `Reset Workstation` so that you can move on to the next lab. If you fail to do this, you will be locked into the GUID from the previous lab.
 +
 NOTE: Clicking Reset Workstation will not stop or delete the lab environment.
@@ -68,14 +69,16 @@ NOTE: Clicking Reset Workstation will not stop or delete the lab environment.
 To log in into the OpenShift console:
 
 * Navigate to the URL `https://master.<GUID>.rhte.opentlc.com` - replace `<GUID>` with the lab GUID from the GuidGrabber tool.
-* Login with username `user<lab number>` and the password mentioned in the GuidGrabber tool - replace <lab number> with the lab number from the GuidGrabber tool.
+* Login with username `user1` and the password mentioned in the GuidGrabber tool.
++
+NOTE: verify if password can  be added to GuidGrabber
 
 To login with the `oc` client:
 
 * In a terminal, enter the following command:
 +
 ----
-$ oc login https://master.<GUID>.rhte.opentlc.com -u user<lab number>
+$ oc login https://master.<GUID>.rhte.opentlc.com -u user1
 ----
 * When prompted, enter the password mentioned in the GuidGrabber tool.
 
