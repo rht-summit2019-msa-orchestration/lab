@@ -194,10 +194,12 @@ NOTE: verify if password can  be added to GuidGrabber
 
 To login with the `oc` client:
 
+NOTE: The lab laptop has the `oc` client installed for both OpenShift 3.x and 4.x. This lab uses OpenShift 3.11. The `oc` client executable to use for this lab is `oc3`.
+
 * In a terminal, enter the following command:
 +
 ----
-$ oc login https://master00.<GUID>.rhte.opentlc.com -u user1
+$ oc3 login https://master00.<GUID>.rhte.opentlc.com -u user1
 ----
 * When prompted, accept to use inssecure connections.
 * When prompted, enter the password mentioned in the GuidGrabber tool.
@@ -215,7 +217,7 @@ Deploying Custom Resource Definitions on an OpenShift cluster requires cluster a
 . Log in into the OpenShift cluster with user `admin` - the password is the same as for `user1`.
 +
 ----
-$ oc login -u admin
+$ oc3 login -u admin
 ----
 . In a terminal, change directory to the folder where you cloned the `installation` project of the lab material.
 . Change directory to the `ansible` directory, and run the `strimzi_operator.yml` playbook:
@@ -232,8 +234,8 @@ image::images/strimzi_operator_ansible_playbook.png[]
 . Log out of the cluster and log back in again as `user1`:
 +
 ----
-$ oc logout
-$ oc login -u user1
+$ oc3 logout
+$ oc3 login -u user1
 ----
 +
 WARNING: This step is essential for the remainder of the lab. The Ansible playbooks that install the different components assume you are logged in into the cluster as `user1`.
@@ -274,8 +276,8 @@ image::images/kafka_cluster_deployment.png[]
 +
 ----
 $ export KAFKA_CLUSTER_PRJ=kafka-cluster-user1
-$ oc project $KAFKA_CLUSTER_PRJ
-$ oc get kafka kafka-cluster -o yaml
+$ oc3 project $KAFKA_CLUSTER_PRJ
+$ oc3 get kafka kafka-cluster -o yaml
 ----
 +
 The Kafka cluster resource descriptor is very detailed. It basically consists of three sections: `zookeeper`, `kafka` and `entityOperator`. +
@@ -285,14 +287,14 @@ image::images/kafka_cluster_resource.png[]
 * To review the topics created on the cluster:
 +
 ----
-$ oc get kafkatopic
+$ oc3 get kafkatopic
 ----
 +
 image::images/kafka_topics.png[]
 * To review the details of a topic:
 +
 ----
-$ oc get kafkatopic topic-driver-command -o yaml
+$ oc3 get kafkatopic topic-driver-command -o yaml
 ----
 +
 image::images/kafka_topic_details.png[]
@@ -329,7 +331,7 @@ Get the URL for the `gogs` route:
 +
 ----
 $ export TOOLS_PRJ=ride-msa-tools-user1
-$ echo "http://$(oc get route gogs -o jsonpath='{.spec.host}') -n $TOOLS_PRJ"
+$ echo "http://$(oc3 get route gogs -o jsonpath='{.spec.host}') -n $TOOLS_PRJ"
 ----
 . In a web browser window, navigate to the gogs URL. Expect to see the Gogs landing page.
 +
@@ -355,7 +357,7 @@ $ ansible-playbook playbooks/pgadmin4.yml
 Get the URL for the `pgadmin4` route:
 +
 ----
-$ echo "http://$(oc get route pgadmin4 -o jsonpath='{.spec.host}') -n $TOOLS_PRJ"
+$ echo "http://$(oc3 get route pgadmin4 -o jsonpath='{.spec.host}') -n $TOOLS_PRJ"
 ----
 . In a browser window, navigate to the URL of the pgAdmin4 route. Login with `admin@example.com/admin123`. Expect to see the landing page of pgAdmin4.
 +
@@ -459,7 +461,7 @@ $ ansible-playbook playbooks/jenkins.yml
 . Wait until the Jenkins pod is up and running. You can verify this by executing the following `oc` command.
 +
 ----
-$ echo "$(oc get dc jenkins -o template --template='{{.status.readyReplicas}}') -n $TOOLS_PRJ"
+$ echo "$(oc3 get dc jenkins -o template --template='{{.status.readyReplicas}}') -n $TOOLS_PRJ"
 ----
 +
 image::images/jenkins_check_dc_1.png[]
@@ -475,7 +477,7 @@ image::images/jenkins_dc_deployed.png[]
 . Get the URL for the `jenkins` route:
 +
 ----
-$ echo "https://$(oc get route jenkins -o jsonpath='{.spec.host}') -n $TOOLS_PRJ"
+$ echo "https://$(oc3 get route jenkins -o jsonpath='{.spec.host}') -n $TOOLS_PRJ"
 ----
 . In a browser window, navigate to the  URL of the Jenkins route. Accept the security exception. Log in with your Openshift username and password. The first time you login, you need to authorize the Jenkins service account access to your Openshift profile. Click `Allow selected permissions`. You are redirected to the Jenkins landing page.
 +
@@ -645,7 +647,7 @@ $ ansible-playbook playbooks/driver_service.yml
 * The build pipeline and the binary buildconfig for the driver service are created in the `ride-msa-tools-user1` project.
 +
 ----
-$ oc get bc -n $TOOLS_PRJ
+$ oc3 get bc -n $TOOLS_PRJ
 ----
 +
 image::images/driver_service_bc.png[]
@@ -653,23 +655,23 @@ image::images/driver_service_bc.png[]
 +
 ----
 $ export SERVICES_PRJ=ride-msa-services-user1
-$ oc project $SERVICES_PRJ
-$ oc get dc
-$ oc get services
+$ oc3 project $SERVICES_PRJ
+$ oc3 get dc
+$ oc3 get services
 ----
 +
 image::images/driver_service_dc.png[]
 * The configmaps are created in the `ride-msa-services-user1` project:
 +
 ----
-$ oc get configmap
+$ oc3 get configmap
 ----
 +
 image::images/driver_service_configmap.png[]
 * The `driver-service` configmap has the connection details for the kafka cluster:
 +
 ----
-$ oc get configmap driver-service -o yaml
+$ oc3 get configmap driver-service -o yaml
 ----
 +
 image::images/driver_service_configmap_details.png[]
@@ -677,7 +679,7 @@ image::images/driver_service_configmap_details.png[]
 . Start the build pipeline for the driver service:
 +
 ----
-$ oc start-build driver-service-pipeline -n $TOOLS_PRJ
+$ oc3 start-build driver-service-pipeline -n $TOOLS_PRJ
 ----
 . Follow the progression of the build pipeline in the OpenShift console - In the OpenShift console, navigate to the _ride-msa-tools-user1_ project, and select _Builds->Pipelines_ from the side menu. +
 Expect the pipeline to complete succesfully.
@@ -688,7 +690,7 @@ If the pipeline build fails, check the pipeline build logs to see what went wron
 . Once the pipeline has executed, check that the driver service has deployed successfully in the _ride-msa-services-user1_ project.
 +
 image::images/driver_service_deployed.png[]
-. In the OpenShift console, navigate to the driver service pod, and check the logs of the pod. Alternatively you can use `oc logs -f <name of the pod>`. +
+. In the OpenShift console, navigate to the driver service pod, and check the logs of the pod. Alternatively you can use `oc3 logs -f <name of the pod>`. +
 Expect to see something like:
 +
 ----
@@ -735,29 +737,29 @@ $ ansible-playbook playbooks/passenger_service.yml
 * The build pipeline and the binary buildconfig for the Passenger service are created in the tools project.
 +
 ----
-$ oc get bc -n $TOOLS_PRJ
+$ oc3 get bc -n $TOOLS_PRJ
 ----
 +
 image::images/passenger_service_bc.png[]
 * The deploymentconfig and service for the Passenger service are created in the services project:
 +
 ----
-$ oc get dc -n $SERVICES_PRJ
-$ oc get service -n $SERVICES_PRJ
+$ oc3 get dc -n $SERVICES_PRJ
+$ oc3 get service -n $SERVICES_PRJ
 ----
 +
 image::images/passenger_service_dc.png[]
 * The configmaps are created in the `ride-msa-services-user1` project:
 +
 ----
-$ oc get configmap -n $SERVICES_PRJ
+$ oc3 get configmap -n $SERVICES_PRJ
 ----
 +
 image::images/passenger_service_configmap.png[]
 * The `passenger-service` configmap has the connection details for the kafka cluster:
 +
 ----
-$ oc get configmap passenger-service -o yaml -n $SERVICES_PRJ
+$ oc3 get configmap passenger-service -o yaml -n $SERVICES_PRJ
 ----
 +
 image::images/passenger_service_configmap_details.png[]
@@ -765,7 +767,7 @@ image::images/passenger_service_configmap_details.png[]
 . Start the build pipeline for the passenger service:
 +
 ----
-$ oc start-build passenger-service-pipeline -n $TOOLS_PRJ
+$ oc3 start-build passenger-service-pipeline -n $TOOLS_PRJ
 ----
 . Follow the progression of the build pipeline in the OpenShift console. Expect the pipeline to complete successfully. +
 If the pipeline build fails, check the pipeline build logs to see what went wrong, and if needed fix the issue.
@@ -774,7 +776,7 @@ image::images/passenger_service_build_pipeline.png[]
 . Once the pipeline has executed, check that the passenger service has deployed successfully.
 +
 image::images/passenger_service_deployed.png[]
-. In the OpenShift console, navigate to the passenger service pod, and check the logs of the pod. Alternatively you can use `oc logs -f <name of the pod>`. +
+. In the OpenShift console, navigate to the passenger service pod, and check the logs of the pod. Alternatively you can use `oc3 logs -f <name of the pod>`. +
 Expect to see something like:
 +
 ----
@@ -848,29 +850,29 @@ $ ansible-playbook playbooks/dispatch_service.yml
 * A Postgresql pod is running in the services project:
 +
 ----
-$ oc get pods -n $SERVICES_PRJ
+$ oc3 get pods -n $SERVICES_PRJ
 ----
 +
 image::images/dispatch_service_postgresq_pod.png[]
 * The build pipeline and the binary buildconfig for the Dispatch service are created in the tools project.
 +
 ----
-$ oc get bc -n $TOOLS_PRJ
+$ oc3 get bc -n $TOOLS_PRJ
 ----
 +
 image::images/dispatch_service_bc.png[]
 * The deploymentconfig and service for the Dispatch service and the database are created in the services project:
 +
 ----
-$ oc get dc -n $SERVICES_PRJ
-$ oc get services -n $SERVICES_PRJ
+$ oc3 get dc -n $SERVICES_PRJ
+$ oc3 get services -n $SERVICES_PRJ
 ----
 +
 image::images/dispatch_service_dc.png[]
 * The configmaps are created in the services project:
 +
 ----
-$ oc get configmap -n $SERVICES_PRJ
+$ oc3 get configmap -n $SERVICES_PRJ
 ----
 +
 image::images/dispatch_service_configmap.png[]
@@ -879,7 +881,7 @@ Note: the `dispatch-service-postgresql-init` configmap contains the ddl scripts 
 * The `dispatch-service` configmap has the connection details for the kafka cluster, settings for the database connection pool and the configuration for the Quartz scheduler (used by the process engine to schedule timers and jobs):
 +
 ----
-$ oc get configmap dispatch-service -o yaml -n $SERVICES_PRJ
+$ oc3 get configmap dispatch-service -o yaml -n $SERVICES_PRJ
 ----
 +
 image::images/dispatch_service_configmap_details.png[]
@@ -887,7 +889,7 @@ image::images/dispatch_service_configmap_details.png[]
 . Start the build pipeline for the dispatch service:
 +
 ----
-$ oc start-build dispatch-service-pipeline -n $TOOLS_PRJ
+$ oc3 start-build dispatch-service-pipeline -n $TOOLS_PRJ
 ----
 . Follow the progression of the build pipeline in the OpenShift console. Expect the pipeline to complete successfully. +
 If the pipeline build fails, check the pipeline build logs to see what went wrong, and if needed fix the issue.
@@ -896,7 +898,7 @@ image::images/dispatch_service_build_pipeline.png[]
 . Once the pipeline has executed, check that the dispatch service has deployed successfully.
 +
 image::images/dispatch_service_deployed.png[]
-. In the OpenShift console, navigate to the dispatch service pod, and check the logs of the pod. Alternatively you can use `oc logs -f <name of the pod>`. +
+. In the OpenShift console, navigate to the dispatch service pod, and check the logs of the pod. Alternatively you can use `oc3 logs -f <name of the pod>`. +
 Expect to see something like:
 +
 ----
@@ -984,7 +986,7 @@ The passenger service exposes a REST endpoint, which when called will send 1 or 
 . In a terminal window, execute the following command using curl:
 +
 ----
-$ PASSENGER_SERVICE_URL=$(echo "http://$(oc get route passenger-service -o jsonpath='{.spec.host}' -n $SERVICES_PRJ)")
+$ PASSENGER_SERVICE_URL=$(echo "http://$(oc3 get route passenger-service -o jsonpath='{.spec.host}' -n $SERVICES_PRJ)")
 $ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 1}' $PASSENGER_SERVICE_URL/simulate
 ----
 +
@@ -993,7 +995,7 @@ $ curl -X POST -H "Content-type: application/json" -d '{"messages": 1, "type": 1
 Sent 1 message(s) with type 1
 ----
 * The type of the message determines the message flow. A type 1 message follows the 'happy path': ride requested -> driver assigned -> ride started -> ride ended -> payment handled.
-. Check the log of the dispatch service in the OpenShift console or using `oc logs`. Expect to see the following, after a couple of seconds:
+. Check the log of the dispatch service in the OpenShift console or using `oc3 logs`. Expect to see the following, after a couple of seconds:
 +
 ----
 2019-04-05 09:41:57.714 DEBUG 1 --- [ntainer#0-3-C-1] c.a.r.d.m.l.RideEventsMessageListener    : Processing 'RideRequestedEvent' message for ride 986f1b0a-062a-44b7-aafd-9018582161d8 from topic:partition topic-ride-event:3
@@ -1095,7 +1097,7 @@ This means that on a container platform, consumers can be scaled down without is
 * Scale down the dispatch server to 0 pods
 +
 ----
-$ oc scale dc dispatch-service --replicas=0 -n $SERVICES_PRJ
+$ oc3 scale dc dispatch-service --replicas=0 -n $SERVICES_PRJ
 ----
 * Call the passenger service REST API:
 +
@@ -1105,14 +1107,14 @@ $ curl -X POST -H "Content-type: application/json" -d '{"messages": 10, "type": 
 * Scale up the dispatch service.
 +
 ----
-$ oc scale dc dispatch-service --replicas=1 -n $SERVICES_PRJ
+$ oc3 scale dc dispatch-service --replicas=1 -n $SERVICES_PRJ
 ----
 * Follow the logs of the dispatch service. Note that after starting up the dispatch service starts to consume the messages sent to the `topic-ride-event` topic while the service was down.
 . A Kafka topic is created with a number of partitions (in the lab, the topics are configured with 15 partitions). When there are multiple consumers belonging to the same consumer group, each consumer will get assigned a number of partitions, effectively spreading the load over the different consumers.
 * Scale up the dispatch service to 2 pods
 +
 ----
-$ oc scale dc dispatch-service --replicas=2 -n $SERVICES_PRJ
+$ oc3 scale dc dispatch-service --replicas=2 -n $SERVICES_PRJ
 ----
 * Wait until the second pod is up and running
 * Call the passenger service REST API, an send a bunch of messages:
@@ -1263,12 +1265,12 @@ Jaeger is installed in the tools project.
 . Deploy Jaeger to the tools project
 +
 ----
-$ oc process -f openshift/jaeger/jaeger-all-in-one.yaml | oc create -f - -n $TOOLS_PRJ
+$ oc3 process -f openshift/jaeger/jaeger-all-in-one.yaml | oc3 create -f - -n $TOOLS_PRJ
 ----
 . Get the URL for the `jaeger-query` route:
 +
 ----
-$ echo "https://$(oc get route jaeger-query -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
+$ echo "https://$(oc3 get route jaeger-query -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
 ----
 . Wait until the jaeger pod is up and running. In a browser window, navigate to the URL of the `jaeger-query` route. Expect to see the Jaeger UI landing page:
 +
@@ -1287,7 +1289,7 @@ $ git push -u gogs tracing
 * Open the driver service configmap for editing:
 +
 ----
-$ oc edit configmap driver-service -o yaml -n $SERVICES_PRJ
+$ oc3 edit configmap driver-service -o yaml -n $SERVICES_PRJ
 ----
 * The configmap descriptor opens in a _vi_ editor. Add the following to the `application-config.yml` entry of the configmap. This is a YAML file, so indentation is important!
 +
@@ -1377,8 +1379,8 @@ Notice the second (side-car) container definition, named `jaeger-agent` and usin
 * Replace the deploymentconfig:
 +
 ----
-$ oc delete dc driver-service -n $SERVICES_PRJ
-$ oc process -f openshift/driver-service/driver-service-tracing-template.yaml -p APPLICATION_NAME=driver-service -p APPLICATION_CONFIGMAP=driver-service -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
+$ oc3 delete dc driver-service -n $SERVICES_PRJ
+$ oc3 process -f openshift/driver-service/driver-service-tracing-template.yaml -p APPLICATION_NAME=driver-service -p APPLICATION_CONFIGMAP=driver-service -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc3 create -f - -n $SERVICES_PRJ
 ----
 . A new deployment of the driver service starts. Note that the pod consists of two containers.
 +
@@ -1411,7 +1413,7 @@ $ git push -u gogs tracing
 * Open the passenger service configmap for editing:
 +
 ----
-$ oc edit configmap passenger-service -o yaml -n $SERVICES_PRJ
+$ oc3 edit configmap passenger-service -o yaml -n $SERVICES_PRJ
 ----
 * The configmap descriptor opens in a _vi_ editor. Add the following to the `application.properties` entry of the configmap. This is a YAML file, so indentation is important!
 +
@@ -1477,8 +1479,8 @@ metadata:
 * Replace the deploymentconfig:
 +
 ----
-$ oc delete dc passenger-service -n $SERVICES_PRJ
-$ oc process -f openshift/passenger-service/passenger-service-tracing-template.yaml -p APPLICATION_NAME=passenger-service -p APPLICATION_CONFIGMAP=passenger-service -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
+$ oc3 delete dc passenger-service -n $SERVICES_PRJ
+$ oc3 process -f openshift/passenger-service/passenger-service-tracing-template.yaml -p APPLICATION_NAME=passenger-service -p APPLICATION_CONFIGMAP=passenger-service -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc3 create -f - -n $SERVICES_PRJ
 ----
 . A new deployment of the passenger service starts. Note that the pod consists of two containers.
 . Check the logs of the passenger service container. Scroll through the logs until you find the log entry for the configuration of the Jaeger tracer:
@@ -1500,7 +1502,7 @@ $ git push -u gogs tracing
 * Open the dispatch service configmap for editing:
 +
 ----
-$ oc edit configmap dispatch-service -o yaml -n $SERVICES_PRJ
+$ oc3 edit configmap dispatch-service -o yaml -n $SERVICES_PRJ
 ----
 * The configmap descriptor opens in a _vi_ editor. Add the following to the `application.properties` entry of the configmap. This is a YAML file, so indentation is important!
 +
@@ -1580,8 +1582,8 @@ data:
 * Replace the deploymentconfig:
 +
 ----
-$ oc delete dc dispatch-service -n $SERVICES_PRJ
-$ oc process -f openshift/dispatch-service/dispatch-service-tracing-template.yaml -p APPLICATION_NAME=dispatch-service -p APPLICATION_CONFIGMAP=dispatch-service -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc create -f - -n $SERVICES_PRJ
+$ oc3 delete dc dispatch-service -n $SERVICES_PRJ
+$ oc3 process -f openshift/dispatch-service/dispatch-service-tracing-template.yaml -p APPLICATION_NAME=dispatch-service -p APPLICATION_CONFIGMAP=dispatch-service -p JAEGER_COLLECTOR_NAMESPACE=$TOOLS_PRJ | oc3 create -f - -n $SERVICES_PRJ
 ----
 . A new deployment of the dispatch service starts. Note that the pod consists of two containers.
 . Check the logs of the dispatch service container. Scroll through the logs until you find the log entry for the configuration of the Jaeger tracer:
@@ -1692,7 +1694,7 @@ $ ansible-playbook playbooks/prometheus.yml
 . Get the URL for the `prometheus` route:
 +
 ----
-$ echo "http://$(oc get route prometheus -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
+$ echo "http://$(oc3 get route prometheus -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
 ----
 . In a browser window, navigate to the URL of the `prometheus` route. Expect to see the Prometheus UI landing page:
 +
@@ -1815,7 +1817,7 @@ image::images/dispatch_service_prometheus_metrics.png[]
 . Patch the `dispatch-service` service to add the required annotations for the Prometheus scraping job:
 +
 ----
-$ oc patch service dispatch-service -p '{"metadata":{"annotations":{"prometheus.io/path":"/actuator/prometheus","prometheus.io/port":"8080","prometheus.io/scrape":"true"}}}' -n $SERVICES_PRJ
+$ oc3 patch service dispatch-service -p '{"metadata":{"annotations":{"prometheus.io/path":"/actuator/prometheus","prometheus.io/port":"8080","prometheus.io/scrape":"true"}}}' -n $SERVICES_PRJ
 ----
 
 . In a browser window, navigate to the Prometheus UI. Go to `Status -> Targets`. Expect to see that the dispatch service target has been discovered:
@@ -1859,7 +1861,7 @@ $ ansible-playbook playbooks/prometheus_sql.yml
 . The playbook deploys the Prometheus SQL pod in the tools project. Prometheus SQL is configured using a configmap. Review the contents of the `prometheus-sql-config` configmap in the tools project:
 +
 ----
-$ oc get configmap prometheus-sql-config -o yaml -n $TOOLS_PRJ
+$ oc3 get configmap prometheus-sql-config -o yaml -n $TOOLS_PRJ
 ----
 +
 ----
@@ -1979,7 +1981,7 @@ $ ansible-playbook playbooks/grafana.yml
 . Get the URL for the Grafana route:
 +
 ----
-$ echo "http://$(oc get route grafana -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
+$ echo "http://$(oc3 get route grafana -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
 ----
 . In a web browser, navigate to the URL of the Grafana route. Expect to see the Grafana Homepage.
 +
