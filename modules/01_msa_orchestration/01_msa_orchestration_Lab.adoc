@@ -186,7 +186,7 @@ NOTE: Clicking Reset Workstation will not stop or delete the lab environment.
 
 To log in into the OpenShift console:
 
-* Navigate to the URL `https://master00.<GUID>.generic.opentlc.com` - replace `<GUID>` with the lab GUID from the GuidGrabber tool.
+* Navigate to the URL `https://master00-<GUID>.generic.opentlc.com` - replace `<GUID>` with the lab GUID from the GuidGrabber tool.
 * Login with username `user1` and the password mentioned in the GuidGrabber tool.
 +
 NOTE: verify if password can  be added to GuidGrabber
@@ -199,9 +199,9 @@ NOTE: The lab laptop has the `oc` client installed for both OpenShift 3.x and 4.
 * In a terminal, enter the following command:
 +
 ----
-$ oc3 login https://master00.<GUID>.rhte.opentlc.com -u user1
+$ oc3 login https://master00-<GUID>.rhte.opentlc.com -u user1
 ----
-* When prompted, accept to use inssecure connections.
+* When prompted, accept to use insecure connections.
 * When prompted, enter the password mentioned in the GuidGrabber tool.
 
 == Provisioning on OpenShift
