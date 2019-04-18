@@ -1705,6 +1705,12 @@ $ git push -u gogs micrometer
 ----
 [...]
 node ('maven-with-pvc') {
+
+  stage('Build and install kjar') {
+    git url: "${git_url}/${git_repo_kjar}", branch: "master"
+    sh "mvn clean install -Dcom.redhat.xpaas.repo.redhatga=true"
+  }
+
   stage ('Compile') {
     echo "Starting build"
     git url: "${git_url}/${git_repo_app}", branch: "micrometer"
