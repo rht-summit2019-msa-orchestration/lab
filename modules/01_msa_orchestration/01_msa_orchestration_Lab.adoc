@@ -1139,100 +1139,6 @@ Enabling tracing requires instrumentation of the application code. However, more
 
 In this lab we will add tracing to the message producers and consumers in the application services. This will give us an overall view of the message flow throughout the system.
 
-=== Code Walkthrough
-
-NOTE: Needs reworking. Move to annex section "How does it work?"
-
-==== Spring Boot - Dispatch service and Passenger service
-
-The OpenTracing _contrib_ project contains a large number of libraries providing integration of OpenTracing with a plethora of technologies and frameworks. +
-Amongst these libraries are `opentracing-jms-2` and `opentracing-jms-spring`. These libraries provide instrumented versions of `javax.jms.MessageProducer` and `javax.jms.MessageListener` which add tracing spans to outgoing and incoming JMS messages. The `opentracing-jms-spring` library integrates with the Spring Boot and Spring JMS components. If these libraries are present on the classpath, the instrumented versions will be used, providing tracing functionality without the need to explicitly add tracing information in the code.
-
-* The tracing information is added as JMS headers to JMS messages
-* For every incoming message, a new span is created. If the incoming message has tracing headers, the trace information is extracted and added to the new span as parent span. The span becomes the active span.
-* For every outgoing message, a new span is created. If there is an active span, it is added to the new span as parent span. The span info is serialized and added to the JMS headers of the message.
-* OpenTracing requires a concrete OpenTracing implementation, in casu Jaeger.
-* Jaeger is initialized in the `com.acme.ride.passenger.tracing.JaegerTracerConfiguration` class.
-* The `opentracing-jms-spring` library is compatible with JMS 1.1, but the Dispatch and Passenger services use JMS 2.0. This means you have to provide and configure a JMS 2.0 compatible version of the `TracingJmsTemplate` class. See `com.acme.ride.passenger.tracing.TracingJmsConfiguration` and `com.acme.ride.passenger.tracing.TracingJmsTemplate` for details.
-* In the Passenger service, an initial span is created for every `RideRequestedEvent` message sent. This span acts as parent span for all subsequent message exchanges and allows to follow the message flow throughout the system.
-+
-----
-    Scope scope = tracer.buildSpan("RideRequested").ignoreActiveSpan()
-        .withTag(Tags.SPAN_KIND.getKey(), "RideRequest")
-        .withTag("msgTraceId", message.getTraceId())
-        .startActive(true);
-----
-
-==== Vert.x - Driver service
-
-Vert.x provides some integration with OpenTracing, but only for the Vert.x Web component, not for the Vert.x AMQP bridge or the Vert.x event bus. +
-This means that the application code needs to be instrumented to provide tracing functionality.
-
-* The Jaeger tracer is initialized in `MainVerticle`.
-* When the `MessageConsumerVerticle` receives a `AssignDriverCommand` message, the span information is extracted from the incoming AMQP message and a new span is created with the extracted span as parent span.
-+
-----
-Scope scope = TracingUtils.buildFollowingSpan(msgBody, tracer);
-----
-+
-----
-    public static Scope buildFollowingSpan(JsonObject message, Tracer tracer) {
-
-        SpanContext context = extract(message, tracer);
-
-        if (context != null) {
-            Tracer.SpanBuilder spanBuilder = tracer.buildSpan(OPERATION_NAME_RECEIVE)
-                    .ignoreActiveSpan()
-                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER);
-
-            spanBuilder.addReference(References.FOLLOWS_FROM, context);
-            Scope scope = spanBuilder.startActive(true);
-            Tags.COMPONENT.set(scope.span(), COMPONENT_NAME);
-            return scope;
-        }
-
-        return null;
-    }
-
-    public static SpanContext extract(JsonObject message, Tracer tracer) {
-        SpanContext spanContext = tracer.extract(Format.Builtin.TEXT_MAP, new AmqpTextMapExtractAdapter(message));
-        if (spanContext != null) {
-            return spanContext;
-        }
-
-        Span span = tracer.activeSpan();
-        if (span != null) {
-            return span.context();
-        }
-        return null;
-    }
-----
-* The current span is stored as a `ThreadLocal` variable. However, every verticle is executed in its own thread, which means that the current span context is lost when a message is sent over the Vert.x event bus to another verticle. This is solved by serializing the active span and attaching it as a header to the event bus message.
-+
-----
-vertx.eventBus().<JsonObject>send("message-producer", message, TracingUtils.injectSpan(new DeliveryOptions(), tracer));
-----
-+
-----
-    public static DeliveryOptions injectSpan(DeliveryOptions options, Tracer tracer) {
-        Span span = tracer.activeSpan();
-        if (span != null) {
-            options.addHeader("opentracing.span", span.context().toString());
-        }
-        return options;
-    }
-----
-* In the `MessageProducerVerticle` the active span is extracted from the event bus message headers. A new span is created as a child span and added to the application properties section of the AMQP message.
-+
-----
-    Span span = TracingUtils.buildAndInjectSpan(amqpMsg, tracer, msg);
-    try {
-        messageProducer.send(amqpMsg);
-    } finally {
-        span.finish();
-    }
-----
-
 === Jaeger on OpenShift
 
 The Jaeger ecosystem consists of the following components:
@@ -2484,5 +2390,99 @@ The producer takes a `JsonObject` as payload. The structure of the JsonObject sh
 
         sendMessageToTopic(config().getString("kafka.topic.driver-event"), rideId, msgOut.toString());
         log.debug("Sent 'DriverAssignedEvent' message for ride " + rideId);
+    }
+----
+
+=== Jaeger - Code Walkthrough
+
+NOTE: Needs reworking. Move to annex section "How does it work?"
+
+==== Spring Boot - Dispatch service and Passenger service
+
+The OpenTracing _contrib_ project contains a large number of libraries providing integration of OpenTracing with a plethora of technologies and frameworks. +
+Amongst these libraries are `opentracing-jms-2` and `opentracing-jms-spring`. These libraries provide instrumented versions of `javax.jms.MessageProducer` and `javax.jms.MessageListener` which add tracing spans to outgoing and incoming JMS messages. The `opentracing-jms-spring` library integrates with the Spring Boot and Spring JMS components. If these libraries are present on the classpath, the instrumented versions will be used, providing tracing functionality without the need to explicitly add tracing information in the code.
+
+* The tracing information is added as JMS headers to JMS messages
+* For every incoming message, a new span is created. If the incoming message has tracing headers, the trace information is extracted and added to the new span as parent span. The span becomes the active span.
+* For every outgoing message, a new span is created. If there is an active span, it is added to the new span as parent span. The span info is serialized and added to the JMS headers of the message.
+* OpenTracing requires a concrete OpenTracing implementation, in casu Jaeger.
+* Jaeger is initialized in the `com.acme.ride.passenger.tracing.JaegerTracerConfiguration` class.
+* The `opentracing-jms-spring` library is compatible with JMS 1.1, but the Dispatch and Passenger services use JMS 2.0. This means you have to provide and configure a JMS 2.0 compatible version of the `TracingJmsTemplate` class. See `com.acme.ride.passenger.tracing.TracingJmsConfiguration` and `com.acme.ride.passenger.tracing.TracingJmsTemplate` for details.
+* In the Passenger service, an initial span is created for every `RideRequestedEvent` message sent. This span acts as parent span for all subsequent message exchanges and allows to follow the message flow throughout the system.
++
+----
+    Scope scope = tracer.buildSpan("RideRequested").ignoreActiveSpan()
+        .withTag(Tags.SPAN_KIND.getKey(), "RideRequest")
+        .withTag("msgTraceId", message.getTraceId())
+        .startActive(true);
+----
+
+==== Vert.x - Driver service
+
+Vert.x provides some integration with OpenTracing, but only for the Vert.x Web component, not for the Vert.x AMQP bridge or the Vert.x event bus. +
+This means that the application code needs to be instrumented to provide tracing functionality.
+
+* The Jaeger tracer is initialized in `MainVerticle`.
+* When the `MessageConsumerVerticle` receives a `AssignDriverCommand` message, the span information is extracted from the incoming AMQP message and a new span is created with the extracted span as parent span.
++
+----
+Scope scope = TracingUtils.buildFollowingSpan(msgBody, tracer);
+----
++
+----
+    public static Scope buildFollowingSpan(JsonObject message, Tracer tracer) {
+
+        SpanContext context = extract(message, tracer);
+
+        if (context != null) {
+            Tracer.SpanBuilder spanBuilder = tracer.buildSpan(OPERATION_NAME_RECEIVE)
+                    .ignoreActiveSpan()
+                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER);
+
+            spanBuilder.addReference(References.FOLLOWS_FROM, context);
+            Scope scope = spanBuilder.startActive(true);
+            Tags.COMPONENT.set(scope.span(), COMPONENT_NAME);
+            return scope;
+        }
+
+        return null;
+    }
+
+    public static SpanContext extract(JsonObject message, Tracer tracer) {
+        SpanContext spanContext = tracer.extract(Format.Builtin.TEXT_MAP, new AmqpTextMapExtractAdapter(message));
+        if (spanContext != null) {
+            return spanContext;
+        }
+
+        Span span = tracer.activeSpan();
+        if (span != null) {
+            return span.context();
+        }
+        return null;
+    }
+----
+* The current span is stored as a `ThreadLocal` variable. However, every verticle is executed in its own thread, which means that the current span context is lost when a message is sent over the Vert.x event bus to another verticle. This is solved by serializing the active span and attaching it as a header to the event bus message.
++
+----
+vertx.eventBus().<JsonObject>send("message-producer", message, TracingUtils.injectSpan(new DeliveryOptions(), tracer));
+----
++
+----
+    public static DeliveryOptions injectSpan(DeliveryOptions options, Tracer tracer) {
+        Span span = tracer.activeSpan();
+        if (span != null) {
+            options.addHeader("opentracing.span", span.context().toString());
+        }
+        return options;
+    }
+----
+* In the `MessageProducerVerticle` the active span is extracted from the event bus message headers. A new span is created as a child span and added to the application properties section of the AMQP message.
++
+----
+    Span span = TracingUtils.buildAndInjectSpan(amqpMsg, tracer, msg);
+    try {
+        messageProducer.send(amqpMsg);
+    } finally {
+        span.finish();
     }
 ----
