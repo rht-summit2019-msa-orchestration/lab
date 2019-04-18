@@ -332,7 +332,7 @@ Get the URL for the `gogs` route:
 +
 ----
 $ export TOOLS_PRJ=ride-msa-tools-user1
-$ echo "http://$(oc3 get route gogs -o jsonpath='{.spec.host}') -n $TOOLS_PRJ"
+$ echo "http://$(oc3 get route gogs -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
 ----
 . In a web browser window, navigate to the gogs URL. Expect to see the Gogs landing page.
 +
@@ -358,7 +358,7 @@ $ ansible-playbook playbooks/pgadmin4.yml
 Get the URL for the `pgadmin4` route:
 +
 ----
-$ echo "http://$(oc3 get route pgadmin4 -o jsonpath='{.spec.host}') -n $TOOLS_PRJ"
+$ echo "http://$(oc3 get route pgadmin4 -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
 ----
 . In a browser window, navigate to the URL of the pgAdmin4 route. Login with `admin@example.com/admin123`. Expect to see the landing page of pgAdmin4.
 +
@@ -462,7 +462,7 @@ $ ansible-playbook playbooks/jenkins.yml
 . Wait until the Jenkins pod is up and running. You can verify this by executing the following `oc` command.
 +
 ----
-$ echo "$(oc3 get dc jenkins -o template --template='{{.status.readyReplicas}}') -n $TOOLS_PRJ"
+$ echo "$(oc3 get dc jenkins -o template --template='{{.status.readyReplicas}}' -n $TOOLS_PRJ)"
 ----
 +
 image::images/jenkins_check_dc_1.png[]
@@ -478,7 +478,7 @@ image::images/jenkins_dc_deployed.png[]
 . Get the URL for the `jenkins` route:
 +
 ----
-$ echo "https://$(oc3 get route jenkins -o jsonpath='{.spec.host}') -n $TOOLS_PRJ"
+$ echo "https://$(oc3 get route jenkins -o jsonpath='{.spec.host}' -n $TOOLS_PRJ")
 ----
 . In a browser window, navigate to the  URL of the Jenkins route. Accept the security exception. Log in with your Openshift username and password. The first time you login, you need to authorize the Jenkins service account access to your Openshift profile. Click `Allow selected permissions`. You are redirected to the Jenkins landing page.
 +
