@@ -337,9 +337,7 @@ $ echo "http://$(oc3 get route gogs -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
 . In a web browser window, navigate to the gogs URL. Expect to see the Gogs landing page.
 +
 image::images/gogs_landing_page.png[]
-. Sign in as user `developer`, password `developer123`. Verify that Gogs contains an organization called `Acme`. We will use this organization to host the application code.
-+
-image::images/gogs_landing_page_organization.png[]
+. Sign in as user `developer`, password `developer123`.
 
 ==== pgAdmin4 installation
 
@@ -601,14 +599,14 @@ The code of the pipeline:
 . In a browser window, navigate to the Gogs landing page. Log in with `developer/developer123`.
 . Create a repository for the driver service source code.
 * Click on the `+` link in the top right corner of the page, and select `New Repository`.
-* In the `New Repository` page make sure to select `acme` as the repository owner.
+* In the `New Repository` page make sure to select `developer` as the repository owner.
 +
-image::images/gogs_repository_owner.png[]
+image::images/gogs_repository_owner_developer.png[]
 * Enter `driver-service` as repository name. Leave the other fields as is.
 * Click `Create Repository`
 * On the landing page of the newly created repository, copy the HTTP URL to the repository.
 +
-image::images/gogs_repository_link.png[]
+image::images/gogs_repository_link_developer.png[]
 . Push the driver service source code to Gogs
 * In a terminal window on your workstation, change directory to the directory where you cloned the driver service source code from GitHub.
 * Add a new remote repository called `gogs` pointing to the repository on Gogs. Add the credentials for the developer user to the url of the remote. Push the source code.
@@ -619,9 +617,9 @@ $ git checkout master
 $ git push -u gogs master
 ----
 . Repeat for the passenger service, dispatch service and dispatch-service-kjar source code. +
-When done you should have four projects in the _Acme_ organization in Gogs:
+When done you should have four projects in the _developer_ dashboard in Gogs:
 +
-image::images/gogs_projects.png[]
+image::images/gogs_projects_developer.png[]
 
 ==== Driver service installation
 
