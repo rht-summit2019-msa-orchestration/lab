@@ -963,10 +963,10 @@ guration$$EnhancerBySpringCGLIB$$6d29b3a0] is not eligible for getting processed
 * Click on the `Add new Server` link on the landing page.
 * In the `Create Server` dialog box, enter `rhpam` as Server name.
 * In the `Connections` tab, enter the following values:
-** Hostname: the url of the PostgreSQL service. This is `dispatch-service-postgresql.<name of the services project>.svc`.
+** Hostname: the url of the PostgreSQL service. This is `dispatch-service-postgresql.ride-msa-services-user1.svc`.
 ** Port: leave to 5432
-** username: jboss
-** password: jboss
+** username: `jboss`
+** password: `jboss`
 * Click on `Save`.
 * Click on the `+` icon next to the `rhpam` node in the `Browser` pane.
 +
