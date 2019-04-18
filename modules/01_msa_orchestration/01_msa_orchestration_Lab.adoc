@@ -1902,7 +1902,7 @@ image::images/grafana_landing_page.png[]
 image::images/grafana_new_panel.png[]
 +
 image::images/grafana_new_panel_2.png[]
-. In the _Queries to_ drop down box, select `Prometheus`. In the query selection area, enter `kafka_pods_max_memory_used`. In the _Legend_ text box, enter `{{pod_name}}`.
+. In the _Queries to_ drop down box, select `Prometheus`. In the query selection area, enter `kafka_pods_total_memory_used`. In the _Legend_ text box, enter `{{pod_name}}`.
 +
 image::images/grafana_panel_kafka_memory_used.png[]
 . Click on the _General_ icon on the left, and set the Panel title to `Kafka Memory Used`. Click on the panel title and select _edit_ to switch to the dashboard view.
