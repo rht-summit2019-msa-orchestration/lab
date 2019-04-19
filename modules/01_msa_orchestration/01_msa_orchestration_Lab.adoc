@@ -73,9 +73,7 @@ NOTE: The _Single Writer_ Principle is often used in microservice and event-driv
 
 The runtime architecture of the lab looks like:
 
-image::images/presentation_runtime_topology.png[]
-
-NOTE: In the picture above, replace EnMasse with AMQ Streams
+image::images/presentation_runtime_topology_kafka.png[]
 
 In the lab, we'll implement the following message flows:
 
