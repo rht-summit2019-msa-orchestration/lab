@@ -112,6 +112,7 @@ $ git clone https://github.com/rht-summit2019-msa-orchestration/dispatch-service
 $ git clone https://github.com/rht-summit2019-msa-orchestration/driver-service.git
 $ git clone https://github.com/rht-summit2019-msa-orchestration/passenger-service.git
 $ git clone https://github.com/rht-summit2019-msa-orchestration/dispatch-service-kjar.git
+$ git clone https://github.com/rht-summit2019-msa-orchestration/soapui.git
 ----
 
 NOTE: We highly encourage you to review the source code of the different services. However, please do not import the source code into an IDE during this lab (a text editor like Atom or Sublime is fine). Doing so will cause the IDE to try to build the code, and start downloading missing Maven dependencies. Considering the number of participants in this lab today, this will consume way too much bandwith.
