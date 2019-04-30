@@ -2169,7 +2169,7 @@ narayana.dbcp.maxTotal=20
 ----
 
 * Datasources:
-** The RHPAM engine uses a JTA managed XA datasource. When using Quartz to hande persistent timers, you also need to provide a non-managed datasource for Quartz.
+** The RHPAM engine uses a JTA managed XA datasource. When using Quartz to handle persistent timers, you also need to provide a non-managed datasource for Quartz.
 ** The managed and the unmanaged datasources use a datasource connection pool powered by the Apache DBCP2 library.
 ** The datasources are configured in the `com.acme.ride.dispatch.DataSourceConfiguration` class.
 ** The datasource configuration properties are prefixed with `spring.datasource`:
