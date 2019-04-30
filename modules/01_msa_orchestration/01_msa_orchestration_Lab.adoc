@@ -63,8 +63,10 @@ The use case for this lab is a fictitious start-up, Acme, launching a taxi-haili
 
 In the context of this lab, we will focus on a tiny part of the overall solution, involving the following services:
 
-* _Passenger service_: is the main gateway for the passenger mobile app. Through the mobile application a passenger can request and follow up on a ride.
-* _Driver service_, acts as the main gateway for the driver mobile app. Through the mobile app, a driver can accept and manage a ride.
+* _Passenger service_: is the main gateway for the passenger mobile app. Through the mobile application a passenger can request and follow up on a ride. +
+The passenger service implementation used in the lab is a mocked service, which does hoever simulate the message exchanges between the passenger service and the other services..
+* _Driver service_, acts as the main gateway for the driver mobile app. Through the mobile app, a driver can accept and manage a ride. +
+The passenger service implementation used in the lab is a mocked service, which does simulate the message exchanges between the driver service and the other services.
 * _Dispatch service_: orchestrates the communication flow between the passenger, driver service and other services. Maintains the state of the ride entity (_single writer_ principle)
 
 NOTE: The _Single Writer_ Principle is often used in microservice and event-driven architectures. The idea is that a single service is responsible for maintaining the state of an entity. Other services are kept up to date by subscribing to events that the Single Writer emits whenever the state of the entity changes. Subscribers typically maintain a read-only view of the entity.
@@ -84,7 +86,9 @@ Messages flowing through the systems fall in two categories: _Commands_, which t
 Apache Kafka follows the _publish and subscribe_ messaging model: messages can be consumed by several consumers.
 
 For an event-driven system as the one that is implemented in this lab, pubish/subscribe topics is generally what you want, as there are typically several services that are interested in a particular type of event. How to map event types to topics? This can vary from 1 topic for all event types to a separate topic per event type, or any variations in between. For the lab, we tried to segment per domain and per event class (event or command). So we ended up with 5 topics: _topic-ride-event_, _topic-driver-command_, _topic-driver-event_, _topic-passenger-command_ and _topic-passenger-event_. +
-This means that message consumers need to filter on the specific event types that they are interested in an discard others.
+This means that message consumers need to filter on the specific event types that they are interested in and discard others.
+
+The several services are implemented using the runtimes provided by Red Hat OpenShift Application Runtimes. More specifically, Spring Boot for the Passenger service and the Dispatch service, Vert.x for the driver service. The Dispatch service uses the RHPAM _Spring Boot starter_ to embed the RHPAM engine in a Spring Boot application.
 
 == Lab Material
 
@@ -123,7 +127,8 @@ NOTE: We highly encourage you to review the source code of the different service
 
 The orchestration logic in the Dispatch service is implemented as a BPMN2 process. From a functional point of view, the orchestration is as follows:
 
-* The Dispatch service receives a _RideRequestedEvent_ message from the _topic-ride-event_ topic.
+* The Dispatch service consumes a _RideRequestedEvent_ message from the _topic-ride-event_ topic.
+* An instance of the Dispatch process is created. The process instance orchestrates the state of the Ride entity and the message exchange between the several services.
 * A _AssignDriverCommand_ is sent to the _topic-driver-command_ topic.
 * The service waits for a _DriverAssignedEvent_ from the _topic-driver-event_ topic.
 * If a _DriverAssignedEvent_ is not received within 5 minutes, the state of the Ride is set to _expired_. A _RideExpiredEvent_ is sent to the _topic-ride-event_ queue.
@@ -143,8 +148,8 @@ The process diagram looks like:
 
 image::images/dispatch_process_2.png[]
 
-* _Signal_ event nodes are used to model the fact that the process is waiting for a certain type of message. When the service receives a message, it finds the relevant process instance, and signals the process.
-* Signal nodes are wait states, so at each signal the state of the process instance is saved in the database.
+* _Signal_ event nodes are used to model the fact that the process instance is waiting for a certain type of message. When the service consumes a message, it finds the relevant process instance, and signals the process.
+* Signal nodes are wait states, so at each signal the state of the process instance is peristed to the database.
 * The data model for the process is very simple: the process instance only keeps track of the _rideId_ for the ride Entity.
 * The process uses two custom _WorkItemHandlers_.
 ** The _Assign Driver_ and _Handle Payment_ nodes use the _SendMessage_ WorkItemHandler. The implementation sends a message of specified type to the specified destination.
@@ -160,13 +165,13 @@ image::images/dispatch_process_update_ride_data_io.png[]
 
 === RHPAM engine embedded in Spring Boot application
 
-Embedding the RHPAM proces engine in a Spring Boot application is extremely easy when using the provided Spring Boot starters. Adding the `jbpm-spring-boot-starter-basic` to the project dependencies will configure all the services required to ppower the process engine, including persistence and transaction management.
+Embedding the RHPAM process engine in a Spring Boot application is extremely easy when using the provided Spring Boot starters. Adding the `jbpm-spring-boot-starter-basic` to the project dependencies will configure all the services required to bootstrap the process engine, including persistence and transaction management. In the service implementation, the RHPAM Service APIs are used to interact with the process engine to for instance start and signal process instances.
 
 == OpenShift Environment
 
 NOTE: TODO: Modify URLs, Lab codes and Screenshots to match Summit Guid Grabber
 
-An Openshift environment is provided to you to deploy and run the lab's assets.
+An Openshift environment is provided to you to deploy and run the lab assets.
 
 Details about the environment are obtained through the Red Hat Summit _GuidGrabber_.
 
@@ -192,7 +197,7 @@ To log in into the OpenShift console:
 NOTE: verify if password can  be added to GuidGrabber
 * Your OpenShift cluster uses self-signed certificates, so expect a security warning in the browser. Create a security exception and proceed.
 
-To login with the `oc` client:
+To login with the OpenShift `oc` client:
 
 NOTE: The lab laptop has the `oc` client installed for both OpenShift 3.x and 4.x. This lab uses OpenShift 3.11. The `oc` client executable to use for this lab is `oc3`.
 
@@ -208,7 +213,7 @@ $ oc3 login https://master00-<GUID>.rhte.opentlc.com -u user1
 
 === AMQ Streams
 
-AMQ Streams uses the Operator model to deploy and manage Kafka (including Zookeeper) clusters. The AMQ Streams Cluster Operator works in tandem with a Kafka Custom Resource Definition, which describes the target Kafka cluster. When a Kafka resource is deployed into an OpenShift namespace monitored by the Cluster Operator, the Operator deploys a corresponding Kafka cluster. The cluster consists of a Zookeeper ensemble, the Kafka cluster and the Entity Operator, which provides operator-style topic management via KafkaTopic custom resources.
+AMQ Streams uses the Operator model to deploy and manage Kafka (including Zookeeper) clusters. The AMQ Streams _Cluster Operator_ works in tandem with a Kafka _Custom Resource Definition_, which describes the target Kafka cluster. When a Kafka resource is deployed into an OpenShift namespace monitored by the Cluster Operator, the Operator deploys a corresponding Kafka cluster. The cluster consists of a Zookeeper ensemble, the Kafka cluster and the Entity Operator, which provides operator-style topic management via _KafkaTopic_ custom resources.
 
 image::images/amq_streams_cluster_operator.png[]
 
@@ -265,7 +270,7 @@ $ ansible-playbook playbooks/kafka_topics.yml
 +
 image::images/kafka_topics_ansible_playbook.png[]
 . Take a moment to review the installation.
-* The Kafka cluster is deployed in a project `kafka-cluster-user1`. In the OpenShift console, log in as your user, and navigate to the project where the Kafka cluster is deployed. Expect to see the following:
+* The Kafka cluster is deployed in a project `kafka-cluster-user1`. In the OpenShift console, log in as `user1`, and navigate to the project where the Kafka cluster is deployed. Expect to see the following:
 +
 image::images/kafka_cluster_deployment.png[]
 +
@@ -1947,9 +1952,9 @@ image::images/grafana_dashboard_1.png[]
 
 Congratulations! You made it to the end of the lab.
 
-=== Appendix - Technical details
+== Appendix - Technical details
 
-== Technical considerations and choices
+=== Technical considerations and choices
 
 * The services in this lab are developed using RHOAR runtimes (Spring Boot, Vert.x)
 * The services used in this lab (Passenger service, Driver service, Dispatch service) communicate by sending and consuming messages to and from topics deployed on a message broker.
