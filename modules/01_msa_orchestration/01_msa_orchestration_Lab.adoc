@@ -204,7 +204,7 @@ NOTE: The lab laptop has the `oc` client installed for both OpenShift 3.x and 4.
 * In a terminal, enter the following command:
 +
 ----
-$ oc3 login https://master00-<GUID>.rhte.opentlc.com -u user1
+$ oc3 login https://master00-<GUID>.generic.opentlc.com -u user1
 ----
 * When prompted, accept to use insecure connections.
 * When prompted, enter the password mentioned in the GuidGrabber tool.
