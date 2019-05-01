@@ -88,7 +88,7 @@ Apache Kafka follows the _publish and subscribe_ messaging model: messages can b
 For an event-driven system as the one that is implemented in this lab, pubish/subscribe topics is generally what you want, as there are typically several services that are interested in a particular type of event. How to map event types to topics? This can vary from 1 topic for all event types to a separate topic per event type, or any variations in between. For the lab, we tried to segment per domain and per event class (event or command). So we ended up with 5 topics: _topic-ride-event_, _topic-driver-command_, _topic-driver-event_, _topic-passenger-command_ and _topic-passenger-event_. +
 This means that message consumers need to filter on the specific event types that they are interested in and discard others.
 
-The several services are implemented using the runtimes provided by Red Hat OpenShift Application Runtimes. More specifically, Spring Boot for the Passenger service and the Dispatch service, Vert.x for the driver service. The Dispatch service uses the RHPAM _Spring Boot starter_ to embed the RHPAM engine in a Spring Boot application.
+The several services are implemented using the runtimes provided by Red Hat OpenShift Application Runtimes. More specifically, Spring Boot for the Passenger service and the Dispatch service, Vert.x for the driver service. The Dispatch service uses the RHPAM _Spring Boot starter_ to embed the RHPAM engine in a Spring Boot application. The RHPAM process engine is used to coordinate the message flow between the services and advance the state of the Ride entity.
 
 == Lab Material
 
@@ -1238,8 +1238,8 @@ data:
     http.port: 8080
 
     # delay before sending a `DriverAssignedEvent` message
-    driver.assigned.min.delay: 1
-    driver.assigned.max.delay: 3
+    driver.assigned.min.delay: 3
+    driver.assigned.max.delay: 6
     # delay before sending a `RideStartedEvent` message
     ride.started.min.delay: 5
     ride.started.max.delay: 10
@@ -1972,143 +1972,31 @@ The RHPAM engine can also be embedded in a stand-alone application. The product 
 
 Our embedded engine uses Narayana as transaction manager, PostgreSQL for the database and Quartz to manage persistent timers.
 
-The next decision to make is how to package or deploy the process definition. Process Server and the KIE Spring Boot starters leverage the _Deployment Service_, which relies on _Maven_ to download and deploy the kjar(s) containing the business process and other assets at runtime. The main drawback here is the dependency on a Maven repository like Nexus at runtime (or at build time, but then you have to make sure that the kjar and its dependencies are injected in a local maven repo in the application image). +
-Specifically for this lab, we wanted to avoid a dependency on a Nexus installation.
+The next decision to make is how to package or deploy the process definition. Process Server and the KIE Spring Boot starters leverage the _Deployment Service_, which relies on _Maven_ to download and deploy the kjar(s) containing the business process and other assets at runtime. The main drawback here is the dependency on a Maven repository like Nexus at runtime (or at build time, but then you have to make sure that the kjar and its dependencies are injected in a local maven repo in the application image).
 
-As an alternative, the business process definition (and other assets if required) can be bundled into the kjar, that can be declared as a dependency in the _pom.xml_ file of the Spring Boot application. This is the approach chosen for this lab. +
-The main downside here is that the design of the process definition needs to be done in Business Central (as we don't really support the Eclipse based designer any more), which requires frequent roundtripping between Business Central and the application source code.
+As an alternative, the business process definition (and other assets if required) can be bundled into the kjar, that can be declared as a dependency in the _pom.xml_ file of the Spring Boot application. This is the approach chosen for this lab.
 
 === Messaging
 
-When it comes to messaging, again some choices have to be made. In a Java world, JMS would be the first choice. However JMS only specifies an API, not the message format or wire protocol. With other words, JMS is not interoperable, even not between broker implementations. In a polyglot microservices world this is a huge drawback.
+When it comes to messaging, again some choices have to be made. Messaging brokers have been around for a long time, and considering the JMS standard in the Java EE world, JMS would be could be an obvious choice. However JMS only specifies an API, not the message format or wire protocol. With other words, JMS is not interoperable, even not between broker implementations. In a polyglot microservices world this is a huge drawback. AMQP on the other hand also defines the message format and wire protocol, making it interoperable between platforms and languages.
 
-AMQP on the other hand also defines the message format and wire protocol, making it interoperable between platforms and languages.
+Recently, Apache Kafka is becoming more and more popular as a message exchange and data streaming platform. Originally developed at LinkedIn, it is a kind message broker but with a few twists to support pub/sub, extreme scalability and replaying of mesages. Other than with traditional brokers where message are removed from the broker once they are consumed by the known and registered consumers, in Kafka messages are retained (potentially) forever. In that regards it acts like a distributed journal, where consumers can start consuming from the beginning at any time. +
+Kafka provides client for a large set of languages including Java, Golang, Javascript, .Net, making it very suitable to be used in polyglot microservices world.
 
-Brokers like AMQ 7, a high-performance messaging implementation based on ActiveMQ Artemis, support multiple protocols, including AMQP, and offer a JMS client as well. With other words, a Java client can use the AMQ 7 JMS client - which uses the OpenWire protocol - to send messages to queue on a AMQ 7 broker, to be consumed by a AMQP client written in e.g. .Net or Ruby.
+For the use case of this labs, both a traditional message broker (which has support for topics) as well as Apache Kafka could be used. In fact, the initial version of this lab leveraged EnMasse, a version of the popular AMQ message broker.
 
-The _qpid-jms_ project provides a JMS API on top of AMQP. When using this library, the client uses a familiar JMS API to produce or consume messages, on top of the AMQP protocol. The _qpid-jms_ library is fully JMS 2.0 compatible, and supports shared and durable subscriptions.
-
-At the moment of writing, Red Hat does only provide _Tech Preview_ images for AMQ 7. On the other hand there is the EnMasse project, which powers the AMQ Online offering hosted on OpenShift. http://enmasse.io[EnMasse] is an open source project for managed, self-service messaging on OpenShift. EnMasse can be used for many purposes, such as moving your messaging infrastructure to the cloud without depending on a specific cloud provider, building a scalable messaging backbone for IoT, or just as a cloud-ready version of a message broker. The last point is exactly what we need for this lab.
-
-EnMasse can provision different types of messaging depending on your use case. A user can request messaging resources by creating an Address Space.
-
-EnMasse currently supports a _standard_ and a _brokered_ address space type, each with different semantics.
-
-*Standard Address Space*
-
-The standard address space type is the default type in EnMasse, and is focused on scaling in the number of connections and the throughput of the system. It supports AMQP and MQTT protocols. This address space type is based on open source projects such as [Apache ActiveMQ Artemis](https://activemq.apache.org/artemis/) and [Apache Qpid Dispatch Router](https://qpid.apache.org/components/dispatch-router/index.html) and provides elastic scaling of these components.
-
-image::images/enmasse_overall_view.png[]
-
-*Brokered Address Space*
-
-The brokered address space type is the "classic" message broker in the cloud which supports AMQP, CORE, OpenWire, and MQTT protocols. It supports JMS with transactions, message groups, selectors on queues and so on. These features are useful for building complex messaging patterns. This address space is also more lightweight as it features only a single broker and a management console.
-
-image::images/enmasse_brokered_view.png[]
-
-In this lab, we use the brokered address space.
+AMQ Streams is a distribution of Apache Kafka, supported by Red Hat and optimized to run on OpenShift.
 
 === Service Implementations
 
 The applicaton services use the RHOAR runtimes. The Ride service and Dispatch service are implemented with Spring Boot, the Driver service uses Vert.x. The versions used are aligned to the current release of RHOAR.
-The choice to use two different runtimes was done on purpose to explore how messaging and in particular AMQP can be used on top of these runtimes. It is planned for further iterations of this lab to also leverage Thorntail (aka WildFly Swarm) and Fuse (Camel on Spring Boot).
+The choice to use two different runtimes was done on purpose to explore how messaging and in particular Apache Kafka, Jaeger integration and appliocation monitoring can be used on top of these runtimes. It is planned for further iterations of this lab to also leverage Thorntail (aka WildFly Swarm) and Fuse (Camel on Spring Boot).
 
-== Architecture Details
+=== Code Walkthrough
 
-*Message data model*
+==== Process Definition
 
-The message payload is kept deliberately very simple. Messages are JSON objects, with a generic structure:
-
-----
-{
-  "messageType": "RideRequestedEvent",
-  "id": "19ad5b0b-286b-41bb-86e3-474fbff0a3aa",
-  "traceId": "907b52ca-5fe1-4f89-909f-79803eb6af62",
-  "sender": "PassengerService",
-  "timestamp": 1521148332397",
-  "payload":{}
- }
-----
-
-* messageType: the type of the message. In general a distinction is made between Commands and Events. Commands tell the recipient to do something (e.g. _AssignDriverCommand, HandlePaymentCommand_). Events inform interested parties that something happened, so that they can act on it (_DriverAssignedEvent, RideStartedEvent_).
-* id: unique id per message.
-* traceId: unique id that is passed along with messages through the entire functional message flow.For tracing purposes.
-* sender: originating service
-* timestamp: timestamp when the message was created
-* payload: a JSON object representing the proper payload of the message. This will be different depending on the message type.
-
-In the lab, we'll implement the following message flows:
-
-image::images/rhte-message-flow.png[]
-
-*Topics*
-
-AMQ 7 has a powerful and flexible addressing model, that comprises three main concepts: addresses, queues and routing types. An address represents a messaging endpoint. Within the configuration, an address is given a unique name, 0 or more queues, and a routing type. +
-The routing type determines how messages are distributed amongst its queues.
-
-* _anycast_: messages are routed to a single queue within the matching address, in a point-to-point manner.
-* _multicast_ : messages are routed to every queue within the matching address, in a publish-subscribe manner.
-
-image::images/artemis_addressing_anycast.png[]
-
-image::images/artemis_addressing_multicast.png[]
-
-The AMQ 7 address model maps nicely to the JMS concepts of queues and topics.
-
-For an event-driven system as the one that is implemented in this lab, pubish/subscribe topics is generally what you want, as there are typically several services that are interested in a particular type of event. How to map event types to topics? This can vary from 1 topic for all event types to a separate topic per event type, or any variations in between. For the lab, we tried to segment per domain and per event class (event or command). So we ended up with 5 topics: _topic-ride-event_, _topic-driver-command_, _topic-driver-event_, _topic-passenger-command_ and _topic-passenger-event_. +
-The downside of this approach is that message consumers need to filter on the specific event types that they are interested in.
-
-*Messaging Protocol*
-
-All services in the application use the AMQP protocol over SSL/TLS (amqps) for communication with the broker. We use one-way SSL - the clients authenticate with username/password.
-
-== Code Walkthrough
-
-=== Process Definition
-
-The orchestration logic in the Dispatch service is implemented as a BPMN2 process. From a functional point of view, the orchestration is as follows:
-
-* The Dispatch service receives a _RideRequestedEvent_ message from the _topic-ride-event_ topic.
-* A _DispatchDriverCommand_ is sent to the _topic-driver-command_ topic.
-* The service waits for a _DriverDispatchedEvent_ from the _topic-driver-event_ topic.
-* If a _DriverDispatchedEvent_ is not received within 5 minutes, the state of the Ride is set to _expired_. A _RideExpiredEvent_ is sent to the _topic-ride-event_ queue.
-* As long as the ride did not start, the passenger can cancel the ride. The service waits on a _RideCanceledEvent_ from the _topic-ride-event_ topic, or a _RideStartedEvent_ form the _driver-event-topic_, whichever comes first.
-* If a _RideCanceledEvent_ is received, the status of the ride is set to _canceled_. +
-The passenger will have to pay a penalty (this part is not implemented)
-* If a _RideStartedEvent_ is received, the status of the ride is set to
-_started_ and the service waits for a _RideEndedEvent_.
-* If a _RideEndedEvent_ is received, a _HandlePaymentCommand_ message is sent to the _topic-passenger-command_ topic. The status of the ride is set to _ended_.
-
-Note that several other use cases are currently not implemented in the lab:
-
-* The driver can cancel a ride
-* The passenger can cancel a ride before the ride is assigned to a driver.
-
-The process diagram looks like:
-
-image::images/dispatch_process_2.png[]
-
-* _Signal_ event nodes are used to model the fact that the process is waiting for a certain type of message. When the service receives a message, it finds the relevant process instance, and signals the process. +
-From a conceptual view it would have been more logical to use BPMN _Message_ event nodes rather than signal nodes. However, Message event nodes are broken in the current version of RHPAM (will be fixed in the next release).
-* Signal nodes are wait states, so at each signal the state of the process instance is saved in the database.
-* The data model for the process is very simple: the process instance only keeps track of the _rideId_ and the _traceId_ for the ride. The _assign_driver_expire_duration_ process variable is the delay after which the timer fires.
-+
-image::images/dispatch_process_variables.png[]
-+
-image::images/dispatch_process_timer_2.png[]
-* The process uses two custom _WorkItemHandlers_.
-** The _Assign Driver_ and _Handle Payment_ nodes use the _SendMessage_ WorkItemHandler. The implementation sends a message of specified type to the specified destination.
-+
-image::images/dispatch_process_send_message_2.png[]
-+
-image::images/dispatch_process_send_message_data_io.png[]
-** The _Ride Request Expired_, _Driver Assigned_, _Ride_Started_, _Ride_Ended_ and _Passenger Canceled_ nodes uses the _UpdateRide_ WorkItemHandler, whose implementation updates the status of the Ride entity.
-+
-image::images/dispatch_process_update_ride_2.png[]
-+
-image::images/dispatch_process_update_ride_data_io.png[]
-
-=== Data model
+==== Data model
 
 The state of a Ride is captured in the `Ride` entity.
 
@@ -2140,19 +2028,18 @@ public class Ride {
     [...]
 ----
 
-The `Ride` entity is stored in the RHPAM database (this is done is this lab to keep things simple). The `Ride` entity is added to the list of persistent classes in `META-INF/jbpm-persistence.xml`.
+The `Ride` entity is stored in the RHPAM database (to keep things simple - in a real life scenario you would probably store this data in its own data store). The `Ride` entity is added to the list of persistent classes in `META-INF/jbpm-persistence.xml`.
 
 The `com.acme.ride.dispatch.dao.RideDao` class handles `Ride` entity CRUD operations.
 
 The `rideId` property is used as correlation key when starting an instance of the dispatch service process.
 
-=== RHPAM engine embedded in Spring Boot application
+==== RHPAM engine embedded in Spring Boot application
 
 Setting up the embedded RHPAM engine requires to pay attention to a number of components required for the correct functioning of the engine.
 
 * JTA Transaction manager.
 ** The transaction manager used is _Narayana_, the transaction manager from WildFly and EAP.
-** The Snowdrop project, the upstream of the RHOAR Spring Boot engineering efforts, has an alternative Narayana Spring Boot starter which does supports connection pools with Apache DPCP2.
 ** The Narayana transaction manager configuration properties are prefixed with `narayana`.
 +
 ----
@@ -2174,9 +2061,9 @@ narayana.dbcp.maxTotal=20
 ----
 
 * Datasources:
-** The RHPAM engine uses a JTA managed XA datasource. When using Quartz to handle persistent timers, you also need to provide a non-managed datasource for Quartz.
+** The RHPAM engine uses a JTA managed XA datasource. When using Quartz to handle persistent timers, a non-managed datasource is required for Quartz.
 ** The managed and the unmanaged datasources use a datasource connection pool powered by the Apache DBCP2 library.
-** The datasources are configured in the `com.acme.ride.dispatch.DataSourceConfiguration` class.
+** The datasources are configured as part of the RHPAM Spring Boot autoconfiguration.
 ** The datasource configuration properties are prefixed with `spring.datasource`:
 +
 ----
@@ -2184,17 +2071,9 @@ spring.datasource.username=jboss
 spring.datasource.password=jboss
 spring.datasource.url=jdbc:postgresql://${postgresql.host}:5432/rhpam
 ----
-** The datasource connection pool configuration properties for the unmaged datasource are prefixed with `spring.datasource.dbcp2`
-+
-----
-spring.datasource.dbcp2.default-auto-commit=false
-spring.datasource.dbcp2.max-total=5
-spring.datasource.dbcp2.max-idle=5
-----
 
 * JPA
 ** The RHPAM engine uses JPA for everything persistence related. The JPA provider is Hibernate.
-** The Spring beans for JTA - `EntityManagerFactory, PersistenceUnitManager, JpaVendorAdapter` - are configured in the `com.acme.ride.dispatch.JpaConfiguration` class.
 ** Hibernate configuration properties are prefixed with `spring.jpa.properties.hibernate`:
 +
 ----
@@ -2204,17 +2083,19 @@ spring.jpa.properties.hibernate.id.new_generator_mappings=false
 spring.jpa.properties.hibernate.hbm2ddl.auto=validate
 spring.jpa.properties.hibernate.show_sql=false
 spring.jpa.properties.hibernate.connection.release_mode=after_statement
+spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true
+spring.jpa.properties.entity-scan-packages=com.acme.ride.dispatch.entity
 ----
 
 * Quartz
 ** By default the RHPAM engine uses a `java.util.concurrent.ScheduledThreadPoolExecutor` to schedule timers and jobs, which will not survive an application restart. To use persistent timers, EJB Timers can be used in a JEE environment. In a non JEE environment, Quartz should be used.
-** The Quartz scheduler is automatically created by the RHPAM engine if a application property `jbpm.quartz.enabled` is set `true`. Quartz configuration file needs to be provided - see the `jbpm-quartz.properties` file in the `etc` folder of the source code for the quartz properties file used. Additionally to use database as job store application property `jbpm.quartz.db` needs to be set to true.
+** The Quartz scheduler is automatically created by the RHPAM engine if a application property `jbpm.quartz.enabled` is set to `true`. A Quartz configuration file needs to be provided - see the `jbpm-quartz.properties` file in the `etc` folder of the source code for the quartz properties file used. Additionally to use the database as job store application property `jbpm.quartz.db` needs to be set to true.
 
 
 * RHPAM engine
 
-* JMS: the JMS layer is configured is the same way as in the passenger service. Details can be found in the next paragraph.
-** The JMS Messaglisteners `DriverAssignedEventMessageListener`, `PassengerCanceledEventMessageListener` and `RideEventsMessageListener` interact with the RHPAM engine through the jBPM services API. This interaction occurs in a transactional context, managed by Spring's `TransactionTemplate`.
+* Kafka integration: Kafka integration is configured is the same way as in the Passenger service. Details can be found in the next paragraph.
+** The Kafka Messagelisteners `DriverAssignedEventMessageListener`, `PassengerCanceledEventMessageListener` and `RideEventsMessageListener` interact with the RHPAM engine through the RHPAM services API. This interaction happens in a transactional context, managed by Spring's `TransactionTemplate`.
 +
 ----
     TransactionTemplate template = new TransactionTemplate(transactionManager);
@@ -2240,13 +2121,13 @@ spring.jpa.properties.hibernate.connection.release_mode=after_statement
 ** `MessageSenderWorkItemHandler` : sends message to a destination using Spring's `KafkaTemplate`. The message type and destination are set by workitem parameters.
 ** `UpdateRideWorkItemhandler` : updates the state of the `Ride` entity. The Ride id and status are set by workitem parameters.
 
-=== Passenger service - Messaging with Spring Boot
+==== Passenger service - Messaging with Spring Boot
 
 The passenger service is implemented with Spring Boot. Actually this is not a real implementation of business functionality, but rather a service mock.
 
 The implementation is very simple. The application exposes a REST endpoint, which when called will send 1 or more `RideRequestedEvent` messages to the `topic-ride-event` topic. There is additional logic to support the passenger cancelation scenario. In that case a `PassengerCanceledEvent` message is sent to to the `topic-passenger-event` when a `DriverAssignedEvent` message has been received from the `topic-driver-event` topic.
 
-Kafka messaging on Spring Boot is made easy with the `spring-kafka` component. Kafka is comfigured in `PassengerServiceKafkaConfiguration` where various components are created:
+Kafka messaging on Spring Boot is made easy with the `spring-kafka` component. Kafka is configured in `PassengerServiceKafkaConfiguration` where various components are created:
 
 * producer factory
 * consumer factory
@@ -2294,7 +2175,7 @@ To consume messages, a method is annotated with `@KafkaListener` specifying the 
 
 The `kafka.concurrency` property in the application configuration define the pool settings for the message consumers.
 
-=== Driver service - Messaging with Vert.x
+==== Driver service - Messaging with Vert.x
 
 The driver service is implemented in Vert.x. Actually this is not a real implementation of business functionality, but rather a service mock.
 
@@ -2333,30 +2214,6 @@ The Kafka consumer is configured in the `start` method of the `MessageConsumerVe
     }
 ----
 
-The different elements of the JSON object correspond to various sections of the message:
-
-----
-{
-  "body": "{\"messageType\":\"AssignDriverCommand\",\"id\":\"cb2b7216-832c-4b28-86eb-981ec3dd2637\",\"traceId\":\"03af65ee-d7c2-43ef-a9cb-343c519137cb\",\"sender\":\"DispatchService\",\"timestamp\":1535012681551,\"payload\":{\"rideId\":\"f7b32455-86da-46a5-9263-221f6d96459d\",\"pickup\":\"North Carolina Museum Of Art, Raleigh, NC 27607\",\"destination\":\"Wake Forest Historical Museum, Wake Forest, NC 27587\",\"price\":26.89,\"passengerId\":\"passenger188\"}}",
-  "body_type": "value",
-  "properties": {
-    "to": "topic-driver-command",
-    "message_id": "ID:e8dc2474-4de3-4a6f-91fc-cc28ce2d1ac6:1:1:1-4",
-    "creation_time": 1535012681553
-  },
-  "header": {
-    "durable": true
-  },
-  "application_properties": {
-    "uber_$dash$_trace_$dash$_id": "36648af51f2072e3:d653a01c524925f9:c10319c831379c4e:1"
-  },
-  "message_annotations": {
-    "x-opt-jms-dest": 1,
-    "x-opt-jms-msg-type": 5
-  }
-}
-----
-
 In the MessageProducerVerticle, the component is initialized in the same way.
 
 ----
@@ -2382,7 +2239,7 @@ In the MessageProducerVerticle, the component is initialized in the same way.
     }
 ----
 
-The producer takes a `JsonObject` as payload. The structure of the JsonObject should reflect the structure of the message.
+The producer takes a `JsonObject` as payload. The structure of the JsonObject reflects the structure of the message.
 
 ----
     private void doSendDriverAssignedMessage(JsonObject msgIn, String driverId) {
@@ -2405,19 +2262,16 @@ The producer takes a `JsonObject` as payload. The structure of the JsonObject sh
 
 === Jaeger - Code Walkthrough
 
-NOTE: Needs reworking. Move to annex section "How does it work?"
-
 ==== Spring Boot - Dispatch service and Passenger service
 
 The OpenTracing _contrib_ project contains a large number of libraries providing integration of OpenTracing with a plethora of technologies and frameworks. +
-Amongst these libraries are `opentracing-jms-2` and `opentracing-jms-spring`. These libraries provide instrumented versions of `javax.jms.MessageProducer` and `javax.jms.MessageListener` which add tracing spans to outgoing and incoming JMS messages. The `opentracing-jms-spring` library integrates with the Spring Boot and Spring JMS components. If these libraries are present on the classpath, the instrumented versions will be used, providing tracing functionality without the need to explicitly add tracing information in the code.
+The `java-kafka-client` and `opentracing-kafka-spring` libraries provide integration with Apache Kafka on the Spring platform. These libraries provide instrumented versions of `org.apache.kafka.clients.producer.Producer` and `org.apache.kafka.clients.consumer.Consumer` which add tracing spans to when consuming or producing Kafka messages.
 
-* The tracing information is added as JMS headers to JMS messages
+* The tracing information is added as headers to Kafka messages
 * For every incoming message, a new span is created. If the incoming message has tracing headers, the trace information is extracted and added to the new span as parent span. The span becomes the active span.
 * For every outgoing message, a new span is created. If there is an active span, it is added to the new span as parent span. The span info is serialized and added to the JMS headers of the message.
 * OpenTracing requires a concrete OpenTracing implementation, in casu Jaeger.
 * Jaeger is initialized in the `com.acme.ride.passenger.tracing.JaegerTracerConfiguration` class.
-* The `opentracing-jms-spring` library is compatible with JMS 1.1, but the Dispatch and Passenger services use JMS 2.0. This means you have to provide and configure a JMS 2.0 compatible version of the `TracingJmsTemplate` class. See `com.acme.ride.passenger.tracing.TracingJmsConfiguration` and `com.acme.ride.passenger.tracing.TracingJmsTemplate` for details.
 * In the Passenger service, an initial span is created for every `RideRequestedEvent` message sent. This span acts as parent span for all subsequent message exchanges and allows to follow the message flow throughout the system.
 +
 ----
@@ -2429,56 +2283,41 @@ Amongst these libraries are `opentracing-jms-2` and `opentracing-jms-spring`. Th
 
 ==== Vert.x - Driver service
 
-Vert.x provides some integration with OpenTracing, but only for the Vert.x Web component, not for the Vert.x AMQP bridge or the Vert.x event bus. +
+Vert.x provides some integration with OpenTracing, but only for the Vert.x Web component, not for the Vert.x Kafka client or the Vert.x event bus. +
 This means that the application code needs to be instrumented to provide tracing functionality.
 
 * The Jaeger tracer is initialized in `MainVerticle`.
-* When the `MessageConsumerVerticle` receives a `AssignDriverCommand` message, the span information is extracted from the incoming AMQP message and a new span is created with the extracted span as parent span.
+* When the `MessageConsumerVerticle` receives a `AssignDriverCommand` message, the span information is extracted from the incoming Kafka message and a new span is created with the extracted span as parent span.
 +
 ----
-Scope scope = TracingUtils.buildFollowingSpan(msgBody, tracer);
+Scope scope = TracingKafkaUtils.buildChildSpan("processAssignDriverCommand", msg, tracer);;
 ----
 +
 ----
-    public static Scope buildFollowingSpan(JsonObject message, Tracer tracer) {
+    public static Scope buildChildSpan(String operationName, KafkaConsumerRecord<String, String> record, Tracer tracer) {
 
-        SpanContext context = extract(message, tracer);
+        SpanContext spanContext = extractSpanContext(record.record().headers(), tracer);
 
-        if (context != null) {
-            Tracer.SpanBuilder spanBuilder = tracer.buildSpan(OPERATION_NAME_RECEIVE)
-                    .ignoreActiveSpan()
-                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER);
-
-            spanBuilder.addReference(References.FOLLOWS_FROM, context);
-            Scope scope = spanBuilder.startActive(true);
-            Tags.COMPONENT.set(scope.span(), COMPONENT_NAME);
-            return scope;
+        if (spanContext != null) {
+            return spanBuilder(operationName, tracer).addReference(References.CHILD_OF, spanContext)
+                    .startActive(true);
         }
-
         return null;
     }
 
-    public static SpanContext extract(JsonObject message, Tracer tracer) {
-        SpanContext spanContext = tracer.extract(Format.Builtin.TEXT_MAP, new AmqpTextMapExtractAdapter(message));
-        if (spanContext != null) {
-            return spanContext;
-        }
-
-        Span span = tracer.activeSpan();
-        if (span != null) {
-            return span.context();
-        }
-        return null;
+    public static SpanContext extractSpanContext(Headers headers, Tracer tracer) {
+        return tracer
+                .extract(Format.Builtin.TEXT_MAP, new KafkaHeadersExtractAdapter(headers, true));
     }
 ----
 * The current span is stored as a `ThreadLocal` variable. However, every verticle is executed in its own thread, which means that the current span context is lost when a message is sent over the Vert.x event bus to another verticle. This is solved by serializing the active span and attaching it as a header to the event bus message.
 +
 ----
-vertx.eventBus().<JsonObject>send("message-producer", message, TracingUtils.injectSpan(new DeliveryOptions(), tracer));
+vertx.eventBus().<JsonObject>send("message-producer", message, TracingKafkaUtils.inject(new DeliveryOptions(), tracer));
 ----
 +
 ----
-    public static DeliveryOptions injectSpan(DeliveryOptions options, Tracer tracer) {
+    public static DeliveryOptions inject(DeliveryOptions options, Tracer tracer) {
         Span span = tracer.activeSpan();
         if (span != null) {
             options.addHeader("opentracing.span", span.context().toString());
@@ -2486,13 +2325,16 @@ vertx.eventBus().<JsonObject>send("message-producer", message, TracingUtils.inje
         return options;
     }
 ----
-* In the `MessageProducerVerticle` the active span is extracted from the event bus message headers. A new span is created as a child span and added to the application properties section of the AMQP message.
+* In the `MessageProducerVerticle` the active span is extracted from the event bus message headers. A new span is created as a child span and added to the header section of the Kafka message.
 +
 ----
-    Span span = TracingUtils.buildAndInjectSpan(amqpMsg, tracer, msg);
-    try {
-        messageProducer.send(amqpMsg);
-    } finally {
-        span.finish();
+    private void sendMessageToTopic(String topic, String key, String value, Message<JsonObject> msg) {
+        KafkaProducerRecord<String, String> record = KafkaProducerRecord.create(topic, key, value);
+        Span span = TracingKafkaUtils.buildAndInjectSpan(record, tracer, msg);
+        try {
+            kafkaProducer.write(record);
+        } finally {
+            span.finish();
+        }
     }
 ----
