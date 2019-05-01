@@ -480,7 +480,7 @@ image::images/jenkins_dc_deployed.png[]
 . Get the URL for the `jenkins` route:
 +
 ----
-$ echo "https://$(oc3 get route jenkins -o jsonpath='{.spec.host}' -n $TOOLS_PRJ")
+$ echo "https://$(oc3 get route jenkins -o jsonpath='{.spec.host}' -n $TOOLS_PRJ)"
 ----
 . In a browser window, navigate to the  URL of the Jenkins route. Accept the security exception. Log in with your Openshift username and password. The first time you login, you need to authorize the Jenkins service account access to your Openshift profile. Click `Allow selected permissions`. You are redirected to the Jenkins landing page.
 +
