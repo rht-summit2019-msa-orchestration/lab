@@ -169,8 +169,6 @@ Embedding the RHPAM process engine in a Spring Boot application is extremely eas
 
 == OpenShift Environment
 
-NOTE: TODO: Modify URLs, Lab codes and Screenshots to match Summit Guid Grabber
-
 An Openshift environment is provided to you to deploy and run the lab assets.
 
 Details about the environment are obtained through the Red Hat Summit _GuidGrabber_.
@@ -193,8 +191,6 @@ To log in into the OpenShift console:
 
 * Navigate to the URL `https://master00-<GUID>.generic.opentlc.com` - replace `<GUID>` with the lab GUID from the GuidGrabber tool.
 * Login with username `user1` and the password mentioned in the GuidGrabber tool.
-+
-NOTE: verify if password can  be added to GuidGrabber
 * Your OpenShift cluster uses self-signed certificates, so expect a security warning in the browser. Create a security exception and proceed.
 
 To login with the OpenShift `oc` client:
